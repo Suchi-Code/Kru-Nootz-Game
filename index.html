@@ -252,21 +252,24 @@
   .hero-word:nth-of-type(3) { animation-delay: 0.5s; }
 
   .hero-highlight {
-    color: var(--accent-yellow);
-    animation:
-      hero-pop-in 0.7s cubic-bezier(.34,1.56,.64,1) 0.5s both,
-      hero-float 3s ease-in-out 1.3s infinite;
+    animation: hero-pop-in 0.7s cubic-bezier(.34,1.56,.64,1) 0.5s both;
+  }
+
+  /* each letter of "เกมคณิตศาสตร์" jumps in turn, in its own rainbow color */
+  .hero-highlight .letter-jump {
+    display: inline-block;
+    animation: letter-hop 1.9s ease-in-out infinite;
+  }
+
+  @keyframes letter-hop {
+    0%, 18%, 100% { transform: translateY(0); }
+    7% { transform: translateY(-0.5em); }
   }
 
   @keyframes hero-pop-in {
     0%   { opacity: 0; transform: translateY(-40px) scale(0.7) rotate(-8deg); }
     60%  { opacity: 1; transform: translateY(6px) scale(1.05) rotate(2deg); }
     100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
-  }
-
-  @keyframes hero-float {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-8px) rotate(-3deg); }
   }
 
   .hero p {
@@ -467,10 +470,12 @@
     margin: 0 auto 12px;
   }
   .feature-icon lottie-player { width: 100%; height: 100%; }
+
   .feature-icon-lg {
     width: 120px;
     height: 120px;
   }
+
   .feature-card h4 {
     font-family: 'Kanit', sans-serif;
     font-size: 1.05rem;
@@ -522,6 +527,28 @@
   }
 
   .coin-reset-btn:hover { color: var(--accent-pink); }
+
+  /* rank badge shown in the "progress" feature card, tied to coins collected */
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 8px 18px;
+    border-radius: 50px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: rgba(46,42,74,0.06);
+    color: var(--text-dark);
+    transition: background 0.3s, color 0.3s, transform 0.3s;
+  }
+
+  .rank-badge.rank-bump { animation: coin-bump 0.4s ease; }
+
+  .rank-badge.rank-bronze { background: linear-gradient(90deg, #f3d3a6, #e6b17e); color: #7a4a1e; }
+  .rank-badge.rank-silver { background: linear-gradient(90deg, #e6eaf2, #c7d0dc); color: #3f4a5a; }
+  .rank-badge.rank-gold   { background: linear-gradient(90deg, #ffe9a8, #ffd05e); color: #7a5100; }
 
   /* Floating coin badge, visible while scrolling the whole page */
   .coin-float-badge {
@@ -797,7 +824,7 @@
   <header class="top-nav">
     <a href="#home" class="nav-brand">
       <div class="nav-logo"><span>🧮</span></div>
-      <div class="nav-title">ห้องเรียนครูนุช (นงนุช ชัยคุณา)</div>
+      <div class="nav-title">ห้องเรียนครูนุช</div>
     </a>
     <nav class="nav-links">
       <a href="#home" class="nav-link"><span class="nav-emoji">🏠</span>หน้าแรก</a>
@@ -870,7 +897,7 @@
           <!-- teacher caption -->
           <div class="teacher-caption">
             <strong>ครูนุช (นงนุช ชัยคุณา)</strong>
-            โรงเรียนวันสันกลางเหนือ
+            โรงเรียนวัดสันกลางเหนือ
           </div>
         </div>
       </div>
@@ -897,7 +924,11 @@
           <lottie-player src="assets/Rocket_launch_animation__Space_exploration.json" background="transparent" speed="1" loop autoplay></lottie-player>
         </div>
         <h4>ก้าวหน้าไว ทะยานสู่เป้าหมาย</h4>
-        <p>ฝึกฝนทีละขั้น พัฒนาไวเหมือนจรวดพุ่งทะยาน</p>
+        <p>สะสมเหรียญเพื่อปลดยศนักบินอวกาศ!</p>
+        <div class="rank-badge" id="rankBadge">
+          <span id="rankEmoji">🚀</span>
+          <span id="rankName">พร้อมเริ่มภารกิจ</span>
+        </div>
       </div>
       <div class="feature-card">
         <div class="feature-icon feature-icon-lg">
@@ -1043,7 +1074,7 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="footer-content">
-      <p>&copy; 2026 ห้องเรียนออนไลน์คุณครูนุช สงวนลิขสิทธิ์</p>
+      <p>&copy; 2024 ห้องเรียนออนไลน์ครูนุช สงวนลิขสิทธิ์</p>
       <p>โรงเรียนวัดสันกลางเหนือ</p>
     </div>
   </footer>
@@ -1090,6 +1121,35 @@
 
   <script>
   (function () {
+    var el = document.querySelector('.hero-highlight');
+    if (!el) return;
+
+    var text = el.textContent;
+    var clusters;
+    if (window.Intl && Intl.Segmenter) {
+      var seg = new Intl.Segmenter('th', { granularity: 'grapheme' });
+      clusters = Array.from(seg.segment(text), function (s) { return s.segment; });
+    } else {
+      clusters = Array.from(text); // fallback for older browsers
+    }
+
+    var rainbow = ['#FF6B6B', '#FF9F43', '#FFCE54', '#8FE0AE', '#4FA8D6', '#A78BFA', '#FF9DB4'];
+    var step = 0.14; // seconds between each letter's hop
+
+    el.textContent = '';
+    clusters.forEach(function (ch, i) {
+      var span = document.createElement('span');
+      span.className = 'letter-jump';
+      span.textContent = ch;
+      span.style.animationDelay = (i * step) + 's';
+      span.style.color = rainbow[i % rainbow.length];
+      el.appendChild(span);
+    });
+  })();
+  </script>
+
+  <script>
+  (function () {
     var STORAGE_KEY = 'mathClassCoins';
     var cards = Array.prototype.slice.call(document.querySelectorAll('.game-card[data-gid]'));
     var total = cards.length;
@@ -1101,6 +1161,16 @@
     var floatBadgeEl = document.getElementById('coinFloatBadge');
     var toastEl = document.getElementById('coinToast');
     var resetBtn = document.getElementById('coinResetBtn');
+    var rankBadgeEl = document.getElementById('rankBadge');
+    var rankEmojiEl = document.getElementById('rankEmoji');
+    var rankNameEl = document.getElementById('rankName');
+
+    function getRank(count) {
+      if (count >= 16) return { emoji: '🥇', name: 'กัปตันจักรวาล (Galaxy Captain)', cls: 'rank-gold' };
+      if (count >= 6)  return { emoji: '🥈', name: 'ผู้การอวกาศ (Commander)', cls: 'rank-silver' };
+      if (count >= 1)  return { emoji: '🥉', name: 'นักบินฝึกหัด (Cadet)', cls: 'rank-bronze' };
+      return { emoji: '🚀', name: 'พร้อมเริ่มภารกิจ', cls: '' };
+    }
 
     function loadCollected() {
       try {
@@ -1141,6 +1211,21 @@
       if (textEl) textEl.textContent = '🪙 เก็บได้ ' + count + '/' + total + ' ด่าน';
       if (floatCountEl) floatCountEl.textContent = count;
       if (floatTotalEl) floatTotalEl.textContent = total;
+
+      if (rankBadgeEl && rankEmojiEl && rankNameEl) {
+        var rank = getRank(count);
+        var prevCls = rankBadgeEl.getAttribute('data-rank-cls');
+        rankEmojiEl.textContent = rank.emoji;
+        rankNameEl.textContent = rank.name;
+        rankBadgeEl.classList.remove('rank-bronze', 'rank-silver', 'rank-gold');
+        if (rank.cls) rankBadgeEl.classList.add(rank.cls);
+        if (prevCls !== null && prevCls !== rank.cls) {
+          rankBadgeEl.classList.remove('rank-bump');
+          void rankBadgeEl.offsetWidth;
+          rankBadgeEl.classList.add('rank-bump');
+        }
+        rankBadgeEl.setAttribute('data-rank-cls', rank.cls);
+      }
 
       cards.forEach(function (card) {
         var gid = card.getAttribute('data-gid');
