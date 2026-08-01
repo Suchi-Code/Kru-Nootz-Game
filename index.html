@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ห้องเรียนคณิตศาสตร์แสนสนุกคุณนุช</title>
+<title>ห้องเรียนคณิตศาสตร์แสนสนุกคุณครู [...]</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Lottie Player for Animations -->
@@ -748,10 +748,8 @@
   }
 
   .lb-list li {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 14px;
+    display: block;
+    padding: 10px 14px;
     border-radius: 14px;
   }
 
@@ -760,12 +758,27 @@
   .lb-list li.lb-me { outline: 2px solid var(--primary-blue); }
 
   .lb-list li.lb-divider {
-    justify-content: center;
+    text-align: center;
     color: #9b97b5;
     font-weight: 700;
     letter-spacing: 2px;
     padding: 4px 14px;
     background: none !important;
+  }
+
+  .lb-row-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .lb-row-meta {
+    margin-top: 2px;
+    padding-left: 48px; /* lines up under the name, past the rank column */
+    font-family: 'Kanit', sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #9b97b5;
   }
 
   .lb-rank {
@@ -792,9 +805,10 @@
     white-space: nowrap;
   }
 
-  .lb-coins {
+  .lb-score {
     font-family: 'Kanit', sans-serif;
-    font-weight: 700;
+    font-weight: 800;
+    font-size: 1.35rem;
     color: var(--primary-blue);
     flex-shrink: 0;
   }
@@ -1001,7 +1015,7 @@
   <header class="top-nav">
     <a href="#home" class="nav-brand">
       <div class="nav-logo"><span>🧮</span></div>
-      <div class="nav-title">ห้องเรียนครูนุช</div>
+      <div class="nav-title">ห้องเรียนครู[...]</div>
     </a>
     <nav class="nav-links">
       <a href="#home" class="nav-link"><span class="nav-emoji">🏠</span>หน้าแรก</a>
@@ -1036,7 +1050,7 @@
       <div class="hero-text">
         <span class="hero-eyebrow">✦ สำหรับนักเรียนชั้นประถมศึกษาปีที่ 4-6</span>
         <h1><span class="hero-word">เรียนรู้สุดสนุก</span><br><span class="hero-word">ไปกับ</span> <span class="hero-word hero-highlight">เกมคณิตศาสตร์</span></h1>
-        <p>ยินดีต้อนรับสู่ห้องเรียนออนไลน์ครูนุช<br>มาผจญภัยในโลกของตัวเลขและรูปทรงกันเถอะ!</p>
+        <p>ยินดีต้อนรับสู่ห้องเรียนออนไลน์ของคุณครู [...]<br>มาผจญภัยในโลกของตัวเลขและรูปทรงกันเถอะ!</p>
         <a href="#games" class="hero-btn">เริ่มเล่นเกม 🚀</a>
       </div>
 
@@ -1073,8 +1087,8 @@
 
           <!-- teacher caption -->
           <div class="teacher-caption">
-            <strong>ครูนุช (นงนุช ชัยคุณา)</strong>
-            โรงเรียนวัดสันกลางเหนือ
+            <strong>ครู [...]</strong>
+            โรงเรียน [...]
           </div>
         </div>
       </div>
@@ -1175,7 +1189,7 @@
           <div><div class="icon">🔵.</div><h3>เกมประมาณค่าทศนิยม</h3><p class="title-en">Decimal Estimation Game</p></div>
           <p>ฝึกประมาณค่าทศนิยมให้แม่นยำ!</p>
         </a>
-        <a href="./game/game2.html" class="game-card card-color-2" target="_blank" rel="noopener" data-gid="2"><span class="visited-mark">🪙</span>
+        <a href="https://share.gemini.google/npi0Al0RUbSO" class="game-card card-color-2" target="_blank" rel="noopener" data-gid="2"><span class="visited-mark">🪙</span>
           <div><div class="icon">➕➖</div><h3>เกม บวก ลบ คูณ หาร</h3><p class="title-en">Math Operations Game</p></div>
           <p>ท้าทายทักษะคำนวณเบื้องต้น</p>
         </a>
@@ -1282,8 +1296,8 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="footer-content">
-      <p>&copy; 2026 ห้องเรียนออนไลน์ครูนุช สงวนลิขสิทธิ์</p>
-      <p>โรงเรียนวัดสันกลางเหนือ</p>
+      <p>&copy; 2024 ห้องเรียนออนไลน์คุณครู [...] สงวนลิขสิทธิ์</p>
+      <p>โรงเรียน [...]</p>
     </div>
   </footer>
 
@@ -1567,11 +1581,13 @@
     function renderRow(row, rank, isMe) {
       var safeName = String(row.name || 'นักเรียน').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       return '<li class="' + (isMe ? 'lb-me' : '') + '">' +
-        '<span class="lb-rank">' + medalFor(rank) + '</span>' +
-        '<span class="lb-name">' + safeName + (isMe ? ' (คุณ)' : '') + '</span>' +
-        '<span class="lb-coins">' + row.total_score + '/' + row.total_possible +
-          ' &nbsp;⏱️ ' + formatTime(row.total_time_seconds) +
-          ' &nbsp;🎮 เล่นแล้ว ' + row.games_played + ' เกม</span>' +
+        '<div class="lb-row-main">' +
+          '<span class="lb-rank">' + medalFor(rank) + '</span>' +
+          '<span class="lb-name">' + safeName + (isMe ? ' (คุณ)' : '') + '</span>' +
+          '<span class="lb-score">' + row.total_score + '/' + row.total_possible + '</span>' +
+        '</div>' +
+        '<div class="lb-row-meta">⏱️ ' + formatTime(row.total_time_seconds) +
+          ' &nbsp;&nbsp; 🎮 เล่นแล้ว ' + row.games_played + ' เกม</div>' +
         '</li>';
     }
 
