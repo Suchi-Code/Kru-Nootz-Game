@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมประมาณค่าทศนิยมแสนสนุก - ป.4-ป.5</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for cute icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Fredoka & Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Sarabun:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Sarabun', 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #ecfdf5 100%);
+            touch-action: manipulation;
+        }
+        .heading-font {
+            font-family: 'Fredoka', 'Sarabun', sans-serif;
+        }
+        /* Custom bouncy scale animations for kid friendliness */
+        .btn-bounce {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-bounce:active {
+            transform: scale(0.92);
+        }
+        /* Confetti particle styling */
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: confettiFall 2.5s ease-out infinite;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(600px) rotate(720deg); opacity: 0; }
+        }
+        /* Sparkle animation */
+        @keyframes pulse-gold {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.6)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(250, 204, 21, 1)); }
+        }
+        .sparkle-trophy {
+            animation: pulse-gold 2s infinite ease-in-out;
+        }
+    </style>
+    <!-- Supabase client + shared MathGame SDK (score/hearts saving) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+    <!-- This file lives in /game/, mathgame-sdk.js lives in /assets/ —
+         hence the "../assets/" path. Do not change unless the folder
+         structure changes. -->
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3 md:p-6 select-none overflow-x-hidden">
+
+    <!-- STEAMING_CHUNK: Setting up the Web Audio API Sound Synthesizer... -->
+    <script>
+        // Sound Synthesis helper using Web Audio API so we don't rely on external mp3 assets
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playCorrect() {
+                this.init();
+                const now = this.ctx.currentTime;
+                
+                // Sweet arpeggio for positive reinforcement
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 -> E5 -> G5 -> C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.35);
+                });
+            }
+            playWrong() {
+                this.init();
+                const now = this.ctx.currentTime;
+                
+                // Low disappointing buzz
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc1.type = 'sawtooth';
+                osc2.type = 'triangle';
+                osc1.frequency.setValueAtTime(150, now);
+                osc2.frequency.setValueAtTime(147, now);
+                
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.4);
+                
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.45);
+                osc2.stop(now + 0.45);
+            }
+            playKeypress() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+                
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.05);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.start(now);
+                osc.stop(now + 0.06);
+            }
+            playFanfare() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const chords = [
+                    [261.63, 329.63, 392.00], // C4
+                    [349.23, 440.00, 523.25], // F4
+                    [392.00, 493.88, 587.33], // G4
+                    [523.25, 659.25, 783.99]  // C5
+                ];
+                
+                chords.forEach((chord, stepIdx) => {
+                    chord.forEach(freq => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + stepIdx * 0.2);
+                        
+                        gain.gain.setValueAtTime(0.1, now + stepIdx * 0.2);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + stepIdx * 0.2 + 0.5);
+                        
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        
+                        osc.start(now + stepIdx * 0.2);
+                        osc.stop(now + stepIdx * 0.2 + 0.6);
+                    });
+                });
+            }
+        }
+        
+        const sounds = new SoundEffects();
+    </script>
+
+    <!-- STEAMING_CHUNK: Structuring Main Container and App Wrapper... -->
+    <!-- Confetti Container -->
+    <div id="confetti-container" class="absolute inset-0 pointer-events-none overflow-hidden z-50"></div>
+
+    <!-- Main Game Window Container -->
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-xl overflow-hidden border-4 border-sky-300 relative flex flex-col">
+        
+        <!-- HEADER STATS BAR -->
+        <div class="bg-gradient-to-r from-sky-400 via-sky-300 to-emerald-300 p-4 text-sky-950 flex justify-between items-center border-b-4 border-sky-100">
+            <div class="flex items-center space-x-2">
+                <div class="bg-white/80 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-trophy text-amber-500 animate-pulse"></i>
+                    <span id="header-score">คะแนน: 0/10</span>
+                </div>
+            </div>
+            <div class="heading-font font-bold text-lg text-white drop-shadow-md flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>ครูนุช</span>
+            </div>
+            <button id="sound-toggle" class="bg-white/30 hover:bg-white/50 p-2 rounded-full w-9 h-9 flex items-center justify-center text-sky-900 transition btn-bounce" onclick="toggleSound()">
+                <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div class="w-full bg-sky-100 h-3 overflow-hidden relative">
+            <div id="progress-bar-fill" class="bg-gradient-to-r from-emerald-400 to-sky-400 h-full w-0 transition-all duration-300 ease-out"></div>
+        </div>
+
+        <!-- SCREEN: 1 - MAIN MENU -->
+        <div id="screen-menu" class="p-5 md:p-8 flex flex-col space-y-6">
+            <div class="text-center space-y-2 py-2">
+                <div class="inline-flex bg-amber-100 p-4 rounded-full border-2 border-amber-300 shadow-inner mb-2 animate-bounce">
+                    <span class="text-4xl">🔢</span>
+                </div>
+                <h1 class="heading-font text-3xl font-bold text-sky-600 drop-shadow-sm">เกมประมาณค่าทศนิยม</h1>
+                <p class="text-slate-500 text-sm md:text-base font-semibold">ฝึกฝนการประมาณค่าทศนิยมแสนสนุก เข้าใจง่าย เก่งชัวร์! (ป.4-5)</p>
+            </div>
+
+            <!-- Player identity, passed in from the homepage -->
+            <div id="menu-player-box" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center text-sm text-slate-500">
+                กำลังโหลดชื่อผู้เล่น...
+            </div>
+
+            <!-- Fixed setup: 10 questions, ระดับปานกลาง (1 decimal place) -->
+            <div class="bg-gradient-to-r from-emerald-50 to-white p-4 rounded-2xl border-2 border-emerald-200 shadow-sm flex items-center space-x-4">
+                <div class="bg-emerald-400 text-white p-3 rounded-xl text-xl font-bold flex items-center justify-center w-12 h-12 shadow">2</div>
+                <div>
+                    <p class="font-bold text-emerald-800 text-base">ระดับปานกลาง — ทศนิยม 1 ตำแหน่ง</p>
+                    <p class="text-xs text-emerald-600">10 ข้อ ต่อการเล่น 1 รอบ</p>
+                </div>
+            </div>
+
+            <button onclick="startGame(2)" id="btn-start-menu" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-2xl shadow-md transition btn-bounce flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-play"></i> <span id="btn-start-menu-label">เริ่มเล่นเกม</span>
+            </button>
+            <div class="text-center text-xs text-slate-400" id="btn-start-menu-note"></div>
+
+            <div class="text-center text-xs text-slate-400">
+                พัฒนาขึ้นมาตามหลักสูตรแกนกลางกลุ่มสาระการเรียนรู้คณิตศาสตร์ (ระดับประถมศึกษาปีที่ 4 - 5)
+            </div>
+        </div>
+
+        <!-- STEAMING_CHUNK: Designing the Gameplay Screen layout... -->
+        <!-- SCREEN: 2 - GAMEPLAY -->
+        <div id="screen-gameplay" class="hidden p-4 md:p-6 flex flex-col space-y-4">
+            
+            <!-- Question Navigation & Tiny Progress Indicators -->
+            <div class="flex items-center justify-end">
+                <!-- No exit/menu button here on purpose: once a round starts,
+                     the player must finish it — no leaving mid-round. -->
+                <div class="bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-bold" id="question-index-display">
+                    ข้อที่ 1 / 10
+                </div>
+            </div>
+
+            <!-- Dynamic Progress Dots -->
+            <div id="dots-container" class="flex flex-wrap justify-center gap-1.5 py-1">
+                <!-- Dots generated via JS -->
+            </div>
+
+            <!-- Main Question Area Card -->
+            <div class="bg-gradient-to-b from-sky-50 to-blue-50 p-5 rounded-3xl border-2 border-sky-100 shadow-sm text-center space-y-3 relative overflow-hidden">
+                <span id="current-mode-badge" class="absolute top-2 left-2 bg-sky-200/70 text-sky-800 text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full">
+                    จำนวนเต็มหน่วย
+                </span>
+                
+                <div class="pt-2">
+                    <p class="text-slate-600 text-sm font-semibold mb-1" id="question-prompt">จงหาค่าประมาณเป็นจำนวนเต็มหน่วยของ</p>
+                    <div class="text-4xl md:text-5xl font-black text-sky-600 tracking-tight heading-font my-2" id="question-decimal">
+                        12.87
+                    </div>
+                    <p class="text-slate-500 text-xs">พิจารณาตำแหน่งทศนิยมอย่างรอบคอบนะเด็กๆ</p>
+                </div>
+            </div>
+
+            <!-- Input & Virtual Keypad Zone -->
+            <div class="space-y-3">
+                <!-- Large Input Box with clear interactive design -->
+                <div class="relative">
+                    <input type="text" id="answer-input" readonly
+                           class="w-full text-center bg-slate-50 border-3 border-sky-200 rounded-2xl py-3.5 text-2xl font-bold tracking-wider text-sky-900 focus:outline-none focus:border-sky-500 transition shadow-inner placeholder-slate-400"
+                           placeholder="กดปุ่มพิมพ์คำตอบที่นี่..." />
+                    <!-- Keyboard focus state overlay styling -->
+                </div>
+
+                <!-- On-Screen Custom Num Pad -->
+                <div class="grid grid-cols-3 gap-2 bg-sky-50/60 p-3 rounded-2xl border border-sky-100">
+                    <button onclick="pressKey('1')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">1</button>
+                    <button onclick="pressKey('2')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">2</button>
+                    <button onclick="pressKey('3')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">3</button>
+                    
+                    <button onclick="pressKey('4')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">4</button>
+                    <button onclick="pressKey('5')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">5</button>
+                    <button onclick="pressKey('6')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">6</button>
+                    
+                    <button onclick="pressKey('7')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">7</button>
+                    <button onclick="pressKey('8')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">8</button>
+                    <button onclick="pressKey('9')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">9</button>
+                    
+                    <button onclick="pressKey('.')" class="bg-sky-100 hover:bg-sky-200 text-sky-950 font-black text-xl py-3 rounded-xl border border-sky-200 shadow-sm btn-bounce">.</button>
+                    <button onclick="pressKey('0')" class="bg-white hover:bg-sky-100 text-sky-900 font-bold text-xl py-3 rounded-xl border border-sky-100 shadow-sm btn-bounce">0</button>
+                    <button onclick="pressKey('backspace')" class="bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold text-lg py-3 rounded-xl border border-orange-200 shadow-sm btn-bounce flex items-center justify-center">
+                        <i class="fa-solid fa-delete-left text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Submit Button -->
+                <button onclick="submitAnswer()" id="btn-submit"
+                        class="w-full bg-gradient-to-r from-emerald-400 to-sky-500 hover:from-emerald-500 hover:to-sky-600 text-white font-bold text-lg py-4 rounded-2xl shadow-md transition-all duration-200 btn-bounce flex items-center justify-center gap-2">
+                    <span>ส่งคำตอบ</span> <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEAMING_CHUNK: Designing the Feedback Overlay and Explanation screen... -->
+        <!-- SCREEN: 3 - ANSWER FEEDBACK OVERLAY -->
+        <div id="screen-feedback" class="hidden p-6 text-center flex flex-col items-center justify-center space-y-5">
+            <!-- Dynamic State Icon (Green check/Red cross) -->
+            <div id="feedback-icon-container" class="w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-md">
+                <i id="feedback-icon" class="fa-solid fa-check"></i>
+            </div>
+
+            <div>
+                <h3 id="feedback-title" class="heading-font text-2xl font-bold">ตอบถูกจ้า! เก่งมาก ๆ</h3>
+                <p id="feedback-subtitle" class="text-slate-500 text-sm mt-1">รับคะแนนสะสมความเก่ง +10 คะแนน</p>
+            </div>
+
+            <!-- Detailed Explanation Card -->
+            <div class="w-full bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 text-left space-y-2 relative shadow-inner">
+                <div class="absolute -top-3.5 left-4 bg-amber-200 text-amber-800 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span>เคล็ดลับความรู้ & วิธีคิด</span>
+                </div>
+                
+                <div class="pt-2 space-y-2">
+                    <div class="flex justify-between items-center bg-white/70 px-3 py-1.5 rounded-lg border border-amber-100">
+                        <span class="text-xs text-slate-500 font-bold">โจทย์ถาม:</span>
+                        <span id="expl-question" class="text-sm font-bold text-slate-800">12.87</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-white/70 px-3 py-1.5 rounded-lg border border-amber-100">
+                        <span class="text-xs text-slate-500 font-bold">คำตอบของเธอ:</span>
+                        <span id="expl-user-ans" class="text-sm font-bold text-red-500">12</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-emerald-100/70 px-3 py-1.5 rounded-lg border border-emerald-200">
+                        <span class="text-xs text-emerald-800 font-bold">คำตอบที่ถูกต้องคือ:</span>
+                        <span id="expl-correct-ans" class="text-sm font-black text-emerald-700">13</span>
+                    </div>
+                    <div class="pt-1.5 border-t border-amber-100 text-xs text-slate-600 leading-relaxed font-medium" id="expl-description">
+                        พิจารณาทศนิยมตำแหน่งที่ 1 คือเลข 8 ซึ่งมากกว่าหรือเท่ากับ 5 เราจึงต้องปัดหลักหน่วยขึ้น 1 จาก 12 จึงกลายเป็น 13
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next button -->
+            <button onclick="goToNextQuestion()" class="w-full bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white font-bold text-lg py-4 rounded-2xl shadow-md transition-all duration-200 btn-bounce flex items-center justify-center gap-2">
+                <span>ข้อต่อไป</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- STEAMING_CHUNK: Designing the Game Over / Summary screen... -->
+        <!-- SCREEN: 4 - SUMMARY/RESULTS -->
+        <div id="screen-summary" class="hidden p-6 flex flex-col space-y-6 items-center text-center">
+            
+            <div class="space-y-2">
+                <div id="trophy-container" class="relative inline-block sparkle-trophy">
+                    <!-- Dynamic Trophy Icon based on Score -->
+                    <span id="summary-trophy-emoji" class="text-7xl">🏆</span>
+                </div>
+                <h2 class="heading-font text-3xl font-bold text-sky-600 mt-2" id="summary-headline">มหัศจรรย์มาก!</h2>
+                <p class="text-slate-500 text-sm font-semibold" id="summary-subtext">คุณเรียนรู้ทศนิยมได้อย่างยอดเยี่ยมและสนุกสนาน</p>
+            </div>
+
+            <!-- Score Stats Box -->
+            <div class="w-full bg-gradient-to-br from-sky-50 to-emerald-50 rounded-2xl p-5 border-2 border-sky-100 shadow-sm flex flex-col items-center justify-center space-y-3">
+                <span class="text-xs text-slate-500 uppercase tracking-widest font-bold">คะแนนรวมของคุณ</span>
+                <div class="flex items-baseline space-x-1">
+                    <span class="text-5xl font-black text-sky-600 heading-font" id="summary-score-earned">9</span>
+                    <span class="text-xl text-slate-400 font-bold">/</span>
+                    <span class="text-xl text-slate-400 font-bold" id="summary-score-total">10</span>
+                </div>
+                <div class="text-sm font-bold text-slate-500 flex items-center gap-1.5">
+                    <i class="fa-regular fa-clock"></i> เวลาที่ใช้: <span id="summary-time">0:00</span>
+                </div>
+
+                <!-- Feedback Badging -->
+                <div class="bg-white/80 px-4 py-1.5 rounded-full border border-sky-200 text-sm font-extrabold text-sky-800 shadow-sm" id="summary-rank-badge">
+                    นักสำรวจคณิตระดับอัจฉริยะ 🌟
+                </div>
+
+                <!-- Save status from Supabase -->
+                <div class="text-xs font-semibold text-slate-500" id="summary-save-status">กำลังบันทึกคะแนน...</div>
+            </div>
+
+            <!-- Review Details Section -->
+            <div class="w-full space-y-2">
+                <h3 class="text-left text-slate-700 font-bold text-sm px-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clipboard-check text-sky-500"></i> สรุปผลความแม่นยำรายข้อ:
+                </h3>
+                <div id="summary-review-list" class="max-h-40 overflow-y-auto w-full pr-1 space-y-2 text-left bg-slate-50/50 p-2 rounded-xl border border-slate-100">
+                    <!-- Dynamic review items generated in JS -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="w-full grid grid-cols-2 gap-3">
+                <button onclick="restartCurrentGame()" id="btn-restart-summary" class="bg-emerald-400 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-2xl shadow-md transition btn-bounce flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-rotate-left"></i> <span id="btn-restart-summary-label">เล่นอีกครั้ง</span>
+                </button>
+                <button onclick="goHome()" class="bg-sky-400 hover:bg-sky-500 text-white font-bold py-3.5 rounded-2xl shadow-md transition btn-bounce flex items-center justify-center gap-1.5 text-sm">
+                    <i class="fa-solid fa-house"></i> กลับหน้าหลัก
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- STEAMING_CHUNK: Core Javascript state definition & generation logic... -->
+    <script>
+        // Unique id for this game — used for saving/checking scores in Supabase
+        const GAME_ID = 'game1';
+
+        // Core Game State Variables
+        let gameState = {
+            currentScreen: 'menu',      // menu, gameplay, feedback, summary
+            currentMode: 2,             // fixed: ระดับปานกลาง only
+            questionCountLimit: 10,     // fixed: always 10 questions
+            currentQuestionIndex: 0,    // 0-indexed progress
+            questions: [],              // dynamically generated list of questions
+            userAnswers: [],            // records of user's inputs
+            score: 0,                   // total correct answers
+            soundEnabled: true,         // sound effects control
+            startTime: null,            // Date.now() when the round started
+            canPlay: true                // updated by refreshStartButtons(); blocks startGame() when hearts are used up
+        };
+
+        // Checks Supabase (via the shared SDK) for whether this device already
+        // has a saved result for this game, and how many hearts remain.
+        // Locks/relabels the Start and Play-Again buttons accordingly.
+        async function refreshStartButtons() {
+            if (!window.MathGameSDK) return;
+
+            const status = await MathGameSDK.getGameStatus(GAME_ID);
+            // status = { played: bool, hearts: number|null }
+
+            let locked = false;
+            let label = 'เริ่มเล่นเกม';
+            let note = '';
+
+            if (!status.played) {
+                locked = false;
+                label = 'เริ่มเล่นเกม';
+            } else if (status.hearts === null || status.hearts > 0) {
+                locked = false;
+                label = 'เล่นอีกครั้ง' + (status.hearts !== null ? ' (เหลือ ' + status.hearts + ' หัวใจ)' : '');
+            } else {
+                locked = true;
+                label = 'ใช้หัวใจครบแล้ว';
+                note = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวง จะเล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้แล้วนะ';
+            }
+
+            gameState.canPlay = !locked;
+
+            var menuBtn = document.getElementById('btn-start-menu');
+            var menuLabel = document.getElementById('btn-start-menu-label');
+            var menuNote = document.getElementById('btn-start-menu-note');
+            if (menuBtn) menuBtn.disabled = locked;
+            if (menuLabel) menuLabel.textContent = label;
+            if (menuNote) menuNote.textContent = note;
+
+            var restartBtn = document.getElementById('btn-restart-summary');
+            var restartLabel = document.getElementById('btn-restart-summary-label');
+            if (restartBtn) restartBtn.disabled = locked;
+            if (restartLabel) restartLabel.textContent = locked ? 'ใช้หัวใจครบแล้ว' : 'เล่นอีกครั้ง';
+        }
+
+        // Initialize keyboard listeners on load
+        window.onload = async function() {
+            // Listen for key presses (supporting physical keyboard dot, numbers, and backspace)
+            document.addEventListener('keydown', function(event) {
+                if (gameState.currentScreen === 'gameplay') {
+                    const key = event.key;
+                    if (['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'].includes(key)) {
+                        pressKey(key);
+                    } else if (key === 'Backspace') {
+                        pressKey('backspace');
+                    } else if (key === 'Enter') {
+                        submitAnswer();
+                    }
+                } else if (gameState.currentScreen === 'feedback') {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        goToNextQuestion();
+                    }
+                }
+            });
+
+            // Show who's playing (name comes from the homepage via ?name=&device=)
+            var playerBox = document.getElementById('menu-player-box');
+            if (window.MathGameSDK) {
+                var player = window.MathGameSDK.getPlayer();
+                if (player.name) {
+                    playerBox.innerHTML = '<i class="fa-solid fa-user text-sky-500"></i> ผู้เล่น: <strong>' +
+                        String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i> ' +
+                        'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึกขึ้นกระดานผู้นำ ' +
+                        '<a href="' + (document.referrer || '../index.html') + '" class="text-sky-600 underline font-bold">กลับไปใส่ชื่อก่อน</a>';
+                }
+            } else {
+                playerBox.textContent = '';
+            }
+
+            await refreshStartButtons();
+        };
+
+        // Leave the game and go back to the homepage
+        function goHome() {
+            window.location.href = document.referrer || '../index.html';
+        }
+
+        // Sound Toggle function
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const soundIcon = document.getElementById('sound-icon');
+            if (gameState.soundEnabled) {
+                soundIcon.className = "fa-solid fa-volume-high";
+            } else {
+                soundIcon.className = "fa-solid fa-volume-xmark text-slate-400";
+            }
+        }
+
+        // Generate dynamic decimals according to mathematical rounding logic constraints
+        function generateDecimal(mode) {
+            let activeMode = mode;
+            if (mode === 'mixed') {
+                activeMode = Math.floor(Math.random() * 3) + 1; // randomly choose 1, 2, or 3
+            }
+
+            let num = 0;
+            let precision = 0;
+            let displayPrompt = '';
+            let currentModeText = '';
+
+            // Generate numbers with diverse decimal layouts and special cases
+            const forceCarrying = Math.random() < 0.25; // 25% chance of complex carrying (e.g. 9.96 or 4.5)
+
+            if (activeMode === 1) {
+                // Mode 1: Nearest Whole number
+                currentModeText = 'จำนวนเต็มหน่วย';
+                displayPrompt = 'จงหาค่าประมาณเป็นจำนวนเต็มหน่วยของ';
+                if (forceCarrying) {
+                    num = parseFloat((Math.floor(Math.random() * 9) + 0.95).toFixed(2)); // e.g. 4.95, 8.97
+                    if (num === 0) num = 4.95;
+                } else {
+                    // Normal range 1.1 to 24.9
+                    const integerPart = Math.floor(Math.random() * 24) + 1;
+                    const decimalsChance = Math.random();
+                    if (decimalsChance < 0.5) {
+                        num = parseFloat((integerPart + (Math.floor(Math.random() * 9) + 1) / 10).toFixed(1));
+                    } else {
+                        num = parseFloat((integerPart + (Math.floor(Math.random() * 99) + 1) / 100).toFixed(2));
+                    }
+                }
+            } else if (activeMode === 2) {
+                // Mode 2: 1 Decimal Place
+                currentModeText = 'ทศนิยม 1 ตำแหน่ง';
+                displayPrompt = 'จงหาค่าประมาณเป็นทศนิยม 1 ตำแหน่งของ';
+                if (forceCarrying) {
+                    num = parseFloat((Math.floor(Math.random() * 15) + 0.99).toFixed(2)); // e.g. 4.99 -> 5.0
+                    if (num === 0) num = 3.99;
+                } else {
+                    // Normal range 1.01 to 19.99
+                    const integerPart = Math.floor(Math.random() * 19) + 1;
+                    const decimalPart = Math.floor(Math.random() * 99) + 1;
+                    const numString = `${integerPart}.${decimalPart.toString().padStart(2, '0')}`;
+                    num = parseFloat(numString);
+                }
+                precision = 1;
+            } else if (activeMode === 3) {
+                // Mode 3: 2 Decimal Places
+                currentModeText = 'ทศนิยม 2 ตำแหน่ง';
+                displayPrompt = 'จงหาค่าประมาณเป็นทศนิยม 2 ตำแหน่งของ';
+                if (forceCarrying) {
+                    num = parseFloat((Math.floor(Math.random() * 9) + 0.999).toFixed(3)); // e.g. 1.999 -> 2.00
+                } else {
+                    // Normal range 0.111 to 9.999
+                    const integerPart = Math.floor(Math.random() * 9) + 0;
+                    const decimalPart = Math.floor(Math.random() * 999) + 1;
+                    const numString = `${integerPart}.${decimalPart.toString().padStart(3, '0')}`;
+                    num = parseFloat(numString);
+                }
+                precision = 2;
+            }
+
+            // Calculations based on standard math rounding logic
+            let finalValueStr = '';
+            let possibleAnswers = [];
+
+            if (activeMode === 1) {
+                const rounded = Math.round(num);
+                finalValueStr = rounded.toString();
+                possibleAnswers = [finalValueStr];
+            } else if (activeMode === 2) {
+                const roundedNum = Math.round(num * 10) / 10;
+                finalValueStr = roundedNum.toFixed(1);
+                
+                // For student-friendliness, accept both '5.0' and '5'
+                possibleAnswers = [
+                    finalValueStr,
+                    parseFloat(finalValueStr).toString()
+                ];
+            } else if (activeMode === 3) {
+                const roundedNum = Math.round(num * 100) / 100;
+                finalValueStr = roundedNum.toFixed(2);
+                
+                // Accept '2.00', '2.0', and '2'
+                possibleAnswers = [
+                    finalValueStr,
+                    parseFloat(finalValueStr).toString(),
+                    parseFloat(finalValueStr).toFixed(1)
+                ];
+            }
+
+            // Remove duplicates from possibleAnswers
+            possibleAnswers = [...new Set(possibleAnswers)];
+
+            // Generate Thai dynamic clear explanation step-by-step
+            const explanation = buildExplanation(num, activeMode, finalValueStr);
+
+            return {
+                number: num,
+                mode: activeMode,
+                modeText: currentModeText,
+                prompt: displayPrompt,
+                correctDisplay: finalValueStr,
+                possibleAnswers: possibleAnswers,
+                explanation: explanation
+            };
+        }
+
+        // STEAMING_CHUNK: Writing Explanation builder logic with exact math details...
+        // Formulates a helpful pedagogical explanation
+        function buildExplanation(num, mode, correctStr) {
+            const numStr = num.toString();
+            const dotIdx = numStr.indexOf('.');
+            
+            if (mode === 1) {
+                // Approximate to nearest whole
+                // Look at tenths (1st decimal)
+                const parts = numStr.split('.');
+                const decimals = parts[1] || '0';
+                const tenths = parseInt(decimals.charAt(0));
+                
+                let expl = `เราต้องการประมาณค่าให้เป็น <strong>จำนวนเต็มหน่วย</strong> จึงต้องสังเกต <strong>ทศนิยมตำแหน่งที่ 1</strong> นั่นคือเลข <strong class="text-sky-600 font-bold">${tenths}</strong>`;
+                if (tenths >= 5) {
+                    expl += ` ซึ่งมีค่าตั้งแต่ <span class="bg-amber-200 px-1.5 py-0.5 rounded font-black text-amber-900">5 ขึ้นไป จึงต้องปัดขึ้น</span> ทำให้ส่วนจำนวนเต็มเดิมคือ ${Math.floor(num)} บวกเพิ่มไป 1 กลายเป็น <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                } else {
+                    expl += ` ซึ่งมีค่าน้อยกว่า <span class="bg-slate-200 px-1.5 py-0.5 rounded font-black text-slate-800">5 จึงต้องปัดทิ้ง</span> ทำให้ส่วนจำนวนเต็มเหลือเท่าเดิมคือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                }
+                return expl;
+            } else if (mode === 2) {
+                // Approximate to 1 Decimal Place
+                // Look at hundredths (2nd decimal)
+                const parts = numStr.split('.');
+                const decimals = (parts[1] || '00').padEnd(2, '0');
+                const hundredths = parseInt(decimals.charAt(1));
+                const tenths = parseInt(decimals.charAt(0));
+
+                let expl = `เราต้องการประมาณทศนิยมให้เหลือ <strong>1 ตำแหน่ง</strong> จึงต้องสังเกต <strong>ทศนิยมตำแหน่งที่ 2</strong> นั่นคือเลข <strong class="text-sky-600 font-bold">${hundredths}</strong>`;
+                
+                if (hundredths >= 5) {
+                    expl += ` ซึ่งมีค่าตั้งแต่ <span class="bg-amber-200 px-1.5 py-0.5 rounded font-black text-amber-900">5 ขึ้นไป จึงต้องปัดขึ้น</span> `;
+                    if (tenths === 9) {
+                        expl += `แต่เนื่องจากทศนิยมตำแหน่งที่ 1 เป็นเลข 9 เมื่อปัดขึ้นจึงเกิดการทดไปยังหลักถัดไป (จำนวนเต็มหน่วย) คำตอบที่ได้คือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                    } else {
+                        expl += `ทำให้ตำแหน่งที่ 1 เดิมคือ ${tenths} บวกขึ้นอีก 1 กลายเป็น ${tenths + 1} คำตอบที่ได้คือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                    }
+                } else {
+                    expl += ` ซึ่งมีค่าน้อยกว่า <span class="bg-slate-200 px-1.5 py-0.5 rounded font-black text-slate-800">5 จึงต้องปัดทิ้ง</span> ทำให้ตำแหน่งที่ 1 มีค่าคงเดิมคือ ${tenths} คำตอบที่ได้คือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                }
+                return expl;
+            } else if (mode === 3) {
+                // Approximate to 2 Decimal Places
+                // Look at thousandths (3rd decimal)
+                const parts = numStr.split('.');
+                const decimals = (parts[1] || '000').padEnd(3, '0');
+                const thousandths = parseInt(decimals.charAt(2));
+                const hundredths = parseInt(decimals.charAt(1));
+                const tenths = parseInt(decimals.charAt(0));
+
+                let expl = `เราต้องการประมาณทศนิยมให้เหลือ <strong>2 ตำแหน่ง</strong> จึงต้องสังเกต <strong>ทศนิยมตำแหน่งที่ 3</strong> นั่นคือเลข <strong class="text-sky-600 font-bold">${thousandths}</strong>`;
+                
+                if (thousandths >= 5) {
+                    expl += ` ซึ่งมีค่าตั้งแต่ <span class="bg-amber-200 px-1.5 py-0.5 rounded font-black text-amber-900">5 ขึ้นไป จึงต้องปัดขึ้น</span> `;
+                    if (hundredths === 9) {
+                        expl += `แต่เนื่องจากทศนิยมตำแหน่งที่ 2 เป็นเลข 9 เมื่อปัดขึ้นจึงเกิดการทดไปยังหลักตำแหน่งที่ 1 (และอาจส่งผลทดต่อหากเกิด 9 สองตัวติดกัน) คำตอบที่ปัดขึ้นแล้วคือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                    } else {
+                        expl += `ทำให้ตำแหน่งที่ 2 เดิมคือ ${hundredths} บวกเพิ่มขึ้นอีก 1 กลายเป็น ${hundredths + 1} คำตอบที่ได้คือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                    }
+                } else {
+                    expl += ` ซึ่งมีค่าน้อยกว่า <span class="bg-slate-200 px-1.5 py-0.5 rounded font-black text-slate-800">5 จึงต้องปัดทิ้ง</span> ทำให้ตำแหน่งที่ 2 มีค่าคงเดิมคือ ${hundredths} คำตอบที่ได้คือ <strong class="text-emerald-700 font-bold">${correctStr}</strong>`;
+                }
+                return expl;
+            }
+            return '';
+        }
+
+        // Setup the quiz structure
+        function startGame(mode) {
+            if (!gameState.canPlay) {
+                // Belt-and-suspenders: buttons are already disabled when locked,
+                // but guard here too in case of a stale click.
+                return;
+            }
+
+            sounds.init();
+            if (gameState.soundEnabled) sounds.playKeypress();
+
+            gameState.currentMode = mode;
+            gameState.currentQuestionIndex = 0;
+            gameState.score = 0;
+            gameState.questions = [];
+            gameState.userAnswers = [];
+            gameState.startTime = Date.now();
+
+            // Generate list of questions dynamically
+            for (let i = 0; i < gameState.questionCountLimit; i++) {
+                gameState.questions.push(generateDecimal(mode));
+            }
+
+            // Update UI elements & Switch screens
+            switchScreen('gameplay');
+            loadQuestion();
+            updateProgressDots();
+        }
+
+        // Restart current game with same mode & settings
+        function restartCurrentGame() {
+            startGame(gameState.currentMode);
+        }
+
+        // STEAMING_CHUNK: Managing screen transitions and display logic...
+        // Screen Switcher Utility
+        function switchScreen(screenId) {
+            const screens = ['menu', 'gameplay', 'feedback', 'summary'];
+            screens.forEach(s => {
+                const element = document.getElementById(`screen-${s}`);
+                if (s === screenId) {
+                    element.classList.remove('hidden');
+                } else {
+                    element.classList.add('hidden');
+                }
+            });
+            gameState.currentScreen = screenId;
+            
+            // Clean active input for fresh slate on gameplay entry
+            if (screenId === 'gameplay') {
+                document.getElementById('answer-input').value = '';
+            }
+        }
+
+        // Load Question details to interface
+        function loadQuestion() {
+            const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
+            
+            // Score and Counter updating
+            document.getElementById('header-score').innerText = `คะแนน: ${gameState.score}/${gameState.questionCountLimit}`;
+            document.getElementById('question-index-display').innerText = `ข้อที่ ${gameState.currentQuestionIndex + 1} / ${gameState.questionCountLimit}`;
+            
+            // Filling progress bar dynamically
+            const progressPercent = ((gameState.currentQuestionIndex) / gameState.questionCountLimit) * 100;
+            document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+
+            // Badge styling according to mode
+            const badge = document.getElementById('current-mode-badge');
+            badge.innerText = currentQuestion.modeText;
+            if (currentQuestion.mode === 1) {
+                badge.className = "absolute top-2 left-2 bg-sky-200/80 text-sky-800 text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full border border-sky-300";
+            } else if (currentQuestion.mode === 2) {
+                badge.className = "absolute top-2 left-2 bg-emerald-200/80 text-emerald-800 text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-300";
+            } else {
+                badge.className = "absolute top-2 left-2 bg-violet-200/80 text-violet-800 text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full border border-violet-300";
+            }
+
+            document.getElementById('question-prompt').innerHTML = currentQuestion.prompt;
+            document.getElementById('question-decimal').innerText = currentQuestion.number;
+            document.getElementById('answer-input').value = '';
+
+            updateProgressDots();
+        }
+
+        // Generates the navigation dot map
+        function updateProgressDots() {
+            const dotsContainer = document.getElementById('dots-container');
+            dotsContainer.innerHTML = '';
+
+            for (let i = 0; i < gameState.questionCountLimit; i++) {
+                const dot = document.createElement('div');
+                dot.className = "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all duration-200 ";
+                
+                if (i === gameState.currentQuestionIndex && gameState.currentScreen === 'gameplay') {
+                    // Current active question
+                    dot.className += "bg-sky-400 text-white border-sky-500 scale-110 shadow-sm ring-2 ring-sky-200";
+                } else if (gameState.userAnswers[i] !== undefined) {
+                    // Answered questions
+                    if (gameState.userAnswers[i].isCorrect) {
+                        dot.className += "bg-emerald-400 text-white border-emerald-500 fa-solid fa-check";
+                        dot.innerHTML = ""; // clean index number to fit icon
+                    } else {
+                        dot.className += "bg-red-400 text-white border-red-500 fa-solid fa-xmark";
+                        dot.innerHTML = "";
+                    }
+                } else {
+                    // Untouched questions
+                    dot.className += "bg-slate-100 text-slate-400 border-slate-200";
+                    dot.innerText = i + 1;
+                }
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        // Process custom Numpad clicks safely
+        function pressKey(key) {
+            if (gameState.soundEnabled) sounds.playKeypress();
+            const input = document.getElementById('answer-input');
+            const currentVal = input.value;
+
+            if (key === 'backspace') {
+                input.value = currentVal.slice(0, -1);
+            } else if (key === '.') {
+                // Prevent typing double dots
+                if (!currentVal.includes('.')) {
+                    input.value = currentVal + '.';
+                }
+            } else {
+                // Safeguard length
+                if (currentVal.length < 8) {
+                    input.value = currentVal + key;
+                }
+            }
+        }
+
+        // STEAMING_CHUNK: Validating answers and launching Feedback UI...
+        // Main answer submit logic
+        function submitAnswer() {
+            const inputVal = document.getElementById('answer-input').value.trim();
+            
+            // Validate that child inserted something
+            if (inputVal === '') {
+                if (gameState.soundEnabled) sounds.playWrong();
+                
+                // Temporary warning animation on empty input
+                const inputEl = document.getElementById('answer-input');
+                inputEl.classList.add('border-red-400', 'animate-bounce');
+                setTimeout(() => {
+                    inputEl.classList.remove('border-red-400', 'animate-bounce');
+                }, 800);
+                return;
+            }
+
+            const currentQ = gameState.questions[gameState.currentQuestionIndex];
+            
+            // Check if player's answer matches any of the mathematically valid string layouts
+            // Convert strings carefully to strip trailing/leading spaces or dots
+            let parsedInput = inputVal;
+            if (parsedInput.endsWith('.')) {
+                parsedInput = parsedInput.slice(0, -1);
+            }
+            
+            const isCorrect = currentQ.possibleAnswers.includes(parsedInput);
+            
+            if (isCorrect) {
+                gameState.score++;
+                if (gameState.soundEnabled) sounds.playCorrect();
+                triggerConfetti();
+            } else {
+                if (gameState.soundEnabled) sounds.playWrong();
+            }
+
+            // Save records
+            gameState.userAnswers[gameState.currentQuestionIndex] = {
+                userRawInput: inputVal,
+                isCorrect: isCorrect,
+                questionObj: currentQ
+            };
+
+            // Prep screen 3 feedback information
+            showFeedbackScreen(isCorrect, currentQ, inputVal);
+        }
+
+        // Render feedback screen content dynamically
+        function showFeedbackScreen(isCorrect, question, userInput) {
+            switchScreen('feedback');
+            
+            const iconContainer = document.getElementById('feedback-icon-container');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const subtitle = document.getElementById('feedback-subtitle');
+
+            if (isCorrect) {
+                iconContainer.className = "w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-md bg-emerald-100 text-emerald-500 border-4 border-emerald-300 animate-bounce";
+                icon.className = "fa-solid fa-circle-check";
+                title.innerText = "ยอดเยี่ยม! ตอบถูกเป๊ะเลย 🎉";
+                title.className = "heading-font text-2xl font-bold text-emerald-600";
+                subtitle.innerText = "หนูเก่งมาก รับคะแนนสะสมความเก่งทันที!";
+            } else {
+                iconContainer.className = "w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-md bg-red-100 text-red-500 border-4 border-red-300 animate-shake";
+                icon.className = "fa-solid fa-triangle-exclamation";
+                title.innerText = "อ๊ะ! เกือบถูกต้องแล้วนะจ๊ะ 💡";
+                title.className = "heading-font text-2xl font-bold text-red-500";
+                subtitle.innerText = "เรามาดูวิธีคิดสั้นๆ เพื่อเรียนรู้ไปด้วยกันนะ";
+            }
+
+            // Detail Card elements
+            document.getElementById('expl-question').innerHTML = `หาค่าประมาณของ <strong class="text-sky-700 text-lg">${question.number}</strong>`;
+            document.getElementById('expl-user-ans').innerText = userInput;
+            document.getElementById('expl-user-ans').className = `text-base font-bold ${isCorrect ? 'text-emerald-600' : 'text-red-500'}`;
+            document.getElementById('expl-correct-ans').innerText = question.correctDisplay;
+            document.getElementById('expl-description').innerHTML = question.explanation;
+        }
+
+        // Move along to next test or show final scoreboard
+        function goToNextQuestion() {
+            if (gameState.soundEnabled) sounds.playKeypress();
+            
+            gameState.currentQuestionIndex++;
+            
+            if (gameState.currentQuestionIndex < gameState.questionCountLimit) {
+                switchScreen('gameplay');
+                loadQuestion();
+            } else {
+                showSummaryScreen();
+            }
+        }
+
+        // STEAMING_CHUNK: Presenting Summary performance and trophies...
+        // Score Summary builder
+        function showSummaryScreen() {
+            switchScreen('summary');
+            if (gameState.soundEnabled) sounds.playFanfare();
+
+            const scorePercent = (gameState.score / gameState.questionCountLimit) * 100;
+            const elapsedSeconds = gameState.startTime ? Math.round((Date.now() - gameState.startTime) / 1000) : 0;
+
+            // Score & time rendering
+            document.getElementById('summary-score-earned').innerText = gameState.score;
+            document.getElementById('summary-score-total').innerText = gameState.questionCountLimit;
+            const em = Math.floor(elapsedSeconds / 60);
+            const es = elapsedSeconds % 60;
+            document.getElementById('summary-time').innerText = em + ':' + (es < 10 ? '0' : '') + es;
+
+            // Save the result to Supabase (best score per game, see mathgame-sdk.js)
+            const statusEl = document.getElementById('summary-save-status');
+            if (window.MathGameSDK) {
+                MathGameSDK.submitScore(GAME_ID, gameState.score, gameState.questionCountLimit, elapsedSeconds)
+                    .then(function (res) {
+                        if (res.saved) {
+                            statusEl.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i> บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                        } else if (res.reason === 'not-better') {
+                            statusEl.innerHTML = '<i class="fa-solid fa-info-circle text-sky-500"></i> รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                        } else if (res.reason === 'no-hearts') {
+                            statusEl.innerHTML = '<i class="fa-solid fa-heart-crack text-red-400"></i> ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                        } else if (res.reason === 'no-player') {
+                            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i> ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                        } else {
+                            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i> บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                        }
+                    })
+                    .catch(function () {
+                        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i> บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    })
+                    .finally(function () { refreshStartButtons(); });
+            } else {
+                statusEl.innerHTML = '';
+            }
+
+            // Trophy evaluation based on percentage
+            const trophyEmoji = document.getElementById('summary-trophy-emoji');
+            const headline = document.getElementById('summary-headline');
+            const subtext = document.getElementById('summary-subtext');
+            const badge = document.getElementById('summary-rank-badge');
+
+            if (scorePercent === 100) {
+                trophyEmoji.innerText = "👑";
+                headline.innerText = "สุดยอดอัจฉริยะคณิตศาสตร์!";
+                subtext.innerText = "เก่งมาก ๆ หนูสามารถทำคะแนนเต็มร้อยในการหาค่าประมาณทศนิยม!";
+                badge.innerText = "ผู้ตรวจการทศนิยมระดับตำนาน 🎖️";
+                badge.className = "bg-amber-100 text-amber-800 border border-amber-300 px-4 py-1.5 rounded-full text-sm font-extrabold shadow-sm";
+            } else if (scorePercent >= 80) {
+                trophyEmoji.innerText = "🏆";
+                headline.innerText = "เก่งกาจมากเลยคนเก่ง!";
+                subtext.innerText = "เข้าใจทัศนิยมได้อย่างคล่องแคล่วว่องไวมาก ปรบมือรัวๆ!";
+                badge.innerText = "แชมเปี้ยนคณิตศาสตร์ทศนิยม 🥇";
+                badge.className = "bg-amber-50 text-amber-700 border border-amber-200 px-4 py-1.5 rounded-full text-sm font-extrabold shadow-sm";
+            } else if (scorePercent >= 50) {
+                trophyEmoji.innerText = "🥈";
+                headline.innerText = "ยินดีด้วย ผ่านเกณฑ์จ้า!";
+                subtext.innerText = "หนูพยายามและแก้โจทย์ปัญหารอบด้านได้เก่งมาก คอยฝึกฝนต่อนะ!";
+                badge.innerText = "นักล่าเหรียญเงินวิชาเลข 🥈";
+                badge.className = "bg-slate-100 text-slate-700 border border-slate-200 px-4 py-1.5 rounded-full text-sm font-extrabold shadow-sm";
+            } else {
+                trophyEmoji.innerText = "⭐";
+                headline.innerText = "มาพยายามอัปเกรดกันต่อ!";
+                subtext.innerText = "ได้ลองฝึกฝนบ่อย ๆ หนูจะจำแม่นและเข้าใจลึกซึ้งยิ่งขึ้น สู้ ๆ นะ!";
+                badge.innerText = "ผู้มีดวงดาวแห่งความพยายาม ⭐️";
+                badge.className = "bg-sky-50 text-sky-700 border border-sky-200 px-4 py-1.5 rounded-full text-sm font-extrabold shadow-sm";
+            }
+
+            // Create list review elements
+            const listContainer = document.getElementById('summary-review-list');
+            listContainer.innerHTML = '';
+
+            gameState.userAnswers.forEach((record, index) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2 rounded-lg border text-xs " + 
+                                 (record.isCorrect ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-800");
+                
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold">ข้อ ${index + 1}:</span>
+                        <span>ค่าประมาณของ <strong>${record.questionObj.number}</strong> (${record.questionObj.modeText})</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-[10px] text-slate-400">ตอบ: ${record.userRawInput}</span>
+                        ${record.isCorrect 
+                            ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' 
+                            : `<i class="fa-solid fa-circle-xmark text-red-500"></i> <strong class="text-emerald-600 font-bold">(${record.questionObj.correctDisplay})</strong>`}
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Confetti Burst Helper for high rewards
+        function triggerConfetti() {
+            const container = document.getElementById('confetti-container');
+            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#eab308', '#a855f7', '#ff7849'];
+            
+            for (let i = 0; i < 40; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'confetti';
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `-20px`;
+                particle.style.animationDelay = `${Math.random() * 0.5}s`;
+                particle.style.transform = `scale(${Math.random() * 0.6 + 0.6})`;
+                
+                container.appendChild(particle);
+                
+                // Clear DOM
+                setTimeout(() => {
+                    particle.remove();
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
