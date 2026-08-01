@@ -38,6 +38,21 @@
     } catch (e) { return ''; }
   }
 
+  // Today's date (YYYY-MM-DD) in Thailand time — used so hearts reset at
+  // midnight Bangkok time regardless of the player's own device timezone.
+  function bangkokDateString() {
+    try {
+      var parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(new Date());
+      var map = {};
+      parts.forEach(function (p) { map[p.type] = p.value; });
+      return map.year + '-' + map.month + '-' + map.day;
+    } catch (e) {
+      return new Date().toISOString().slice(0, 10); // fallback, rare
+    }
+  }
+
   // Reads the player's name/device — from the URL if the page was opened
   // from the homepage (?name=...&device=...), otherwise falls back to
   // whatever is saved in this browser already.
@@ -58,28 +73,51 @@
   }
 
   // Makes sure a row exists in `players` for this device (in case the
-  // game was opened without ever visiting the homepage first).
+  // game was opened without ever visiting the homepage first). Also
+  // resets hearts_remaining to HEARTS_DEFAULT once a new day has started
+  // in Thailand time (hearts_reset_date column — see the SQL migration).
   async function ensurePlayerRow(deviceId, name) {
     var supa = getClient();
     if (!supa || !deviceId) return null;
+    var today = bangkokDateString();
     try {
-      var existing = await supa.from('players').select('hearts_remaining, name').eq('device_id', deviceId).maybeSingle();
+      var existing = await supa.from('players')
+        .select('hearts_remaining, name, hearts_reset_date')
+        .eq('device_id', deviceId).maybeSingle();
+
       if (existing.data) {
-        // Row already exists for this device — if the player just typed
-        // a different name (e.g. via "เปลี่ยนชื่อ"), push it to Supabase
-        // too, otherwise the old name would be stuck there forever.
-        if (name && name !== existing.data.name) {
+        var row = existing.data;
+        var updates = {};
+
+        // Player just typed a different name (e.g. via "เปลี่ยนชื่อ") —
+        // push it to Supabase too, otherwise the old name sticks forever.
+        if (name && name !== row.name) updates.name = name;
+
+        // New Thailand calendar day since last reset -> refill hearts.
+        if (row.hearts_reset_date !== today) {
+          updates.hearts_remaining = HEARTS_DEFAULT;
+          updates.hearts_reset_date = today;
+        }
+
+        if (Object.keys(updates).length > 0) {
           var updated = await supa.from('players')
-            .update({ name: name })
+            .update(updates)
             .eq('device_id', deviceId)
-            .select('hearts_remaining, name')
+            .select('hearts_remaining, name, hearts_reset_date')
             .maybeSingle();
           if (updated.data) return updated.data;
         }
-        return existing.data;
+        return row;
       }
-      var insertPayload = { device_id: deviceId, name: name || 'นักเรียน', hearts_remaining: HEARTS_DEFAULT };
-      var created = await supa.from('players').insert(insertPayload).select('hearts_remaining, name').maybeSingle();
+
+      var insertPayload = {
+        device_id: deviceId,
+        name: name || 'นักเรียน',
+        hearts_remaining: HEARTS_DEFAULT,
+        hearts_reset_date: today
+      };
+      var created = await supa.from('players').insert(insertPayload)
+        .select('hearts_remaining, name, hearts_reset_date').maybeSingle();
       return created.data;
     } catch (e) {
       console.warn('ensurePlayerRow failed', e);
