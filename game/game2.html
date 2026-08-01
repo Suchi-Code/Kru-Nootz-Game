@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ผจญภัยในเกาะขนมหวาน: บวก ลบ คูณ หาร ป.4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Fredoka:wght@400;600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Sarabun', 'Chakra Petch', sans-serif;
+            background-color: #FFF5F7;
+        }
+        .font-kids {
+            font-family: 'Fredoka', 'Chakra Petch', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FFE4E8;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #FFB3C1;
+            border-radius: 10px;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        .pop-effect {
+            animation: pop 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800 selection:bg-pink-200">
+
+    <!-- Header / Navigation Bar -->
+    <header class="bg-white/90 backdrop-blur-md border-b-4 border-pink-100 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="showMainMenu()">
+                <div class="bg-gradient-to-tr from-pink-400 to-amber-400 text-white p-2.5 rounded-2xl shadow-lg transform rotate-[-3deg] hover:rotate-[3deg] transition-all">
+                    <span class="text-3xl">🧁</span>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold font-kids tracking-wide bg-gradient-to-r from-pink-600 via-purple-600 to-amber-500 bg-clip-text text-transparent">SweetMath ป.4</h1>
+                    <p class="text-xs text-slate-500 font-semibold">ผจญภัยในเกาะขนมหวาน 🍪</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button id="soundToggle" onclick="toggleSound()" class="p-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" title="เปิด/ปิดเสียง">
+                    <span id="soundIcon" class="text-xl">🔊</span>
+                </button>
+                <button id="btnHome" onclick="showMainMenu()" class="hidden px-4 py-2 rounded-2xl bg-rose-100 hover:bg-rose-200 text-rose-600 font-bold text-sm transition-all shadow-sm flex items-center gap-1.5">
+                    <span>🏠</span> หน้าแรก
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 flex flex-col justify-center">
+        
+        <!-- ================= MAIN MENU SCREEN ================= -->
+        <div id="mainMenu" class="space-y-8 py-6">
+            <div class="bg-gradient-to-r from-pink-100 via-purple-100 to-amber-100 rounded-3xl p-6 md:p-10 border-4 border-white shadow-xl text-center relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 text-9xl opacity-10 select-none">🍰</div>
+                <div class="absolute -bottom-10 -right-10 text-9xl opacity-10 select-none">🐻</div>
+                
+                <div class="relative z-10 max-w-2xl mx-auto space-y-4">
+                    <span class="inline-block bg-white/80 text-pink-700 text-xs md:text-sm font-extrabold px-4 py-1.5 rounded-full border border-pink-200 shadow-sm uppercase tracking-wider">
+                        เกมคณิตศาสตร์ ระดับชั้นประถมศึกษาปีที่ 4 ✨
+                    </span>
+                    <h2 class="text-3xl md:text-5xl font-extrabold font-kids text-slate-800 leading-tight">
+                        ตะลุยเกาะขนมหวาน กับพี่หมีเบเกอร์! 🐻🧁
+                    </h2>
+                    <p class="text-slate-600 text-base md:text-lg leading-relaxed">
+                        ท้าทายทักษะ บวก ลบ คูณ หาร และโจทย์ระคนสุดสนุก 10 ข้อ พิชิตขนมหวานแสนอร่อยไปด้วยกัน!
+                    </p>
+                    <div id="menu-player-box" class="text-sm font-semibold text-slate-500 bg-white/70 inline-block px-4 py-1.5 rounded-full border border-pink-200 shadow-sm"></div>
+                    <div class="pt-4">
+                        <button id="btn-start" onclick="startGame()" class="px-8 py-4 rounded-3xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold text-xl shadow-xl border-b-4 border-rose-700 active:scale-95 transition-all flex items-center gap-3 mx-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-pink-500 disabled:hover:to-rose-500">
+                            <span>🚀</span> เริ่มผจญภัยเลย!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PLAYGAME SCREEN ================= -->
+        <div id="gamePlay" class="hidden my-4 space-y-6">
+            
+            <!-- Progress & Header -->
+            <div class="bg-white rounded-3xl p-4 border-4 border-pink-100 shadow-md flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🏆</span>
+                    <span class="font-extrabold text-slate-700">ข้อที่ <span id="currentQuestionNum" class="text-pink-600">1</span> / 10</span>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-1/2 bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200">
+                    <div id="progressBar" class="bg-gradient-to-r from-pink-400 to-rose-500 h-full transition-all duration-300" style="width: 10%;"></div>
+                </div>
+                <div class="bg-pink-50 text-pink-700 px-3 py-1 rounded-full font-bold text-sm">
+                    คะแนน: <span id="currentScore">0</span>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="bg-white rounded-3xl p-6 border-4 border-pink-100 shadow-xl space-y-6">
+                
+                <!-- Mascot & Question Title -->
+                <div class="flex items-start gap-3">
+                    <div class="bg-pink-100 p-3 rounded-2xl border-2 border-pink-200 shadow-sm shrink-0">
+                        <span id="mascotIcon" class="text-4xl">🐻</span>
+                    </div>
+                    <div class="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4 rounded-2xl rounded-tl-none font-bold text-sm md:text-base leading-relaxed shadow-md w-full relative">
+                        <span id="stageBadge" class="bg-white/20 text-xs px-2.5 py-0.5 rounded-full font-semibold block mb-1">ด่านที่ 1</span>
+                        <h3 id="questionText" class="text-lg md:text-xl font-extrabold leading-snug">
+                            กำลังโหลดโจทย์...
+                        </h3>
+                    </div>
+                </div>
+
+                <!-- 4 Choice Grid -->
+                <div id="optionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <!-- Dynamic Choice Buttons -->
+                </div>
+
+                <!-- Feedback Box -->
+                <div id="feedbackBox" class="hidden p-4 rounded-2xl border-2 transition-all duration-300 pop-effect">
+                    <div class="flex gap-3 items-start">
+                        <span id="feedbackIcon" class="text-3xl">🎉</span>
+                        <div>
+                            <p id="feedbackTitle" class="font-extrabold text-base"></p>
+                            <p id="feedbackText" class="text-sm mt-1 leading-relaxed"></p>
+                        </div>
+                    </div>
+                    <button id="btnNextQuestion" onclick="goToNextQuestion()" class="mt-4 w-full py-3 bg-pink-500 hover:bg-pink-600 active:scale-95 text-white font-extrabold rounded-xl shadow-md border-b-4 border-pink-700 transition-all">
+                        ไปข้อถัดไปกันเลย! 🚀
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= RESULT SCREEN ================= -->
+        <div id="gameResult" class="hidden max-w-lg mx-auto bg-white rounded-3xl p-8 border-4 border-pink-200 shadow-2xl text-center space-y-6">
+            <div class="relative inline-block">
+                <div class="text-8xl">🏆</div>
+                <div class="absolute -top-2 -right-2 text-3xl animate-bounce">✨</div>
+                <div class="absolute -bottom-2 -left-2 text-3xl animate-pulse">🎉</div>
+            </div>
+            
+            <div class="space-y-2">
+                <h3 class="text-3xl font-extrabold text-slate-800 font-kids">ยอดเยี่ยมมากๆ คนเก่ง!</h3>
+                <p class="text-slate-500 font-semibold text-sm">การผจญภัยบนเกาะขนมหวานสิ้นสุดลงแล้ว</p>
+            </div>
+
+            <!-- Score Stats Box -->
+            <div class="bg-pink-50/60 rounded-2xl p-6 border-2 border-dashed border-pink-200 space-y-3">
+                <p class="text-slate-600 font-bold">สรุปคะแนนของน้อง</p>
+                <div class="text-5xl font-extrabold text-pink-600 font-kids">
+                    <span id="finalScore">0</span> / 10
+                </div>
+                <p id="scoreAssessmentText" class="text-emerald-600 font-bold text-base">สุดยอด! หนูเก่งคณิตศาสตร์มากๆ เลย</p>
+            </div>
+
+            <p id="summary-save-status" class="text-sm font-semibold text-slate-500"></p>
+
+            <!-- Actions -->
+            <div class="grid grid-cols-2 gap-3 pt-4">
+                <button id="btn-restart" onclick="startGame()" class="py-3 bg-pink-500 hover:bg-pink-600 text-white font-extrabold rounded-2xl shadow-md border-b-4 border-pink-700 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-pink-500">
+                    🔄 เล่นอีกครั้ง
+                </button>
+                <button onclick="showMainMenu()" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-2xl shadow-sm border border-slate-300 transition-all text-sm">
+                    🏠 กลับหน้าแรก
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-400 py-6 mt-8 border-t-4 border-slate-900">
+        <div class="max-w-4xl mx-auto px-4 text-center space-y-1">
+            <p class="text-xs md:text-sm font-semibold">
+                © 2026 SweetMath - เกมคณิตศาสตร์แสนสนุก ชั้นประถมศึกษาปีที่ 4
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        /* Supabase / MathGameSDK wiring */
+        const GAME_ID = 'game2';
+        let startTime = null;
+
+        function getElapsedSeconds() {
+            return startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+        }
+
+        /* Web Audio API Sound Generator */
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.15);
+                    osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.45);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.45);
+                } else if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.1);
+                }
+            } catch (err) {
+                console.log("Audio Error", err);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundIcon');
+            btn.innerText = soundEnabled ? "🔊" : "🔇";
+            if (soundEnabled) playSound('click');
+        }
+
+        /* 10 Question Dataset */
+        const questionsData = [
+            {
+                id: 1,
+                stage: "ด่านที่ 1: คัพเค้กสตรอว์เบอร์รี (การบวก)",
+                question: "พี่หมีอบคัพเค้กสตรอว์เบอร์รีได้ 1,450 ชิ้น และอบคัพเค้กช็อกโกแลตเพิ่มอีก 2,320 ชิ้น รวมแล้วพี่หมีมีคัพเค้กทั้งหมดกี่ชิ้น?",
+                options: ["3,670 ชิ้น", "3,770 ชิ้น", "3,870 ชิ้น", "4,770 ชิ้น"],
+                correctIndex: 1,
+                explanation: "คิดคำนวณจาก 1,450 + 2,320 = 3,770 ชิ้นจ้า"
+            },
+            {
+                id: 2,
+                stage: "ด่านที่ 2: คุกกี้ช็อกโกแลตชิป (การลบ)",
+                question: "ในไหมีคุกกี้อยู่ 5,600 ชิ้น เจ้ากระรอกแอบหยิบไปกิน 1,850 ชิ้น จะเหลือคุกกี้ในไหกี่ชิ้น?",
+                options: ["3,650 ชิ้น", "3,750 ชิ้น", "3,850 ชิ้น", "4,250 ชิ้น"],
+                correctIndex: 1,
+                explanation: "คิดคำนวณจาก 5,600 - 1,850 = 3,750 ชิ้นจ้า"
+            },
+            {
+                id: 3,
+                stage: "ด่านที่ 3: อมยิ้มเปลี่ยนสี (การคูณ)",
+                question: "กล่องอมยิ้มเวทมนตร์ 1 กล่อง มีอมยิ้มอยู่ 45 ไม้ ถ้าพี่หมีมีอมยิ้มทั้งหมด 12 กล่อง จะมีอมยิ้มรวมกี่ไม้?",
+                options: ["500 ไม้", "540 ไม้", "580 ไม้", "600 ไม้"],
+                correctIndex: 1,
+                explanation: "คิดคำนวณจาก 45 × 12 = 540 ไม้จ้า"
+            },
+            {
+                id: 4,
+                stage: "ด่านที่ 4: เค้กส้มมินิ (การหาร)",
+                question: "พี่หมีต้องการแบ่งเค้กส้ม 360 ชิ้น ใส่กล่อง กล่องละ 8 ชิ้น จะต้องใช้กล่องทั้งหมดกี่ใบ?",
+                options: ["40 ใบ", "42 ใบ", "45 ใบ", "50 ใบ"],
+                correctIndex: 2,
+                explanation: "คิดคำนวณจาก 360 ÷ 8 = 45 ใบจ้า"
+            },
+            {
+                id: 5,
+                stage: "ด่านที่ 5: ลูกเพียรี่เยลลี่ (บวก-ลบ ระคน)",
+                question: "แม่นมมีเยลลี่สีชมพู 4,500 เม็ด ซื้อมาเพิ่มอีก 1,200 เม็ด แล้วแจกให้เด็กๆ ไป 2,800 เม็ด แม่นมจะเหลือเยลลี่กี่เม็ด?",
+                options: ["2,700 เม็ด", "2,800 เม็ด", "2,900 เม็ด", "3,100 เม็ด"],
+                correctIndex: 2,
+                explanation: "คิดคำนวณจาก (4,500 + 1,200) - 2,800 = 2,900 เม็ดจ้า"
+            },
+            {
+                id: 6,
+                stage: "ด่านที่ 6: สายไหมอวกาศ (บวก-คูณ ระคน)",
+                question: "หาผลลัพธ์ของสมการนี้: 150 + (25 × 4) = ?",
+                options: ["250", "300", "700", "800"],
+                correctIndex: 0,
+                explanation: "ทำในวงเล็บก่อน (25 × 4 = 100) แล้วนำ 150 + 100 = 250 จ้า"
+            },
+            {
+                id: 7,
+                stage: "ด่านที่ 7: โดนัทหลากสี (คูณ-หาร ระคน)",
+                question: "มีโดนัท 15 ถาด แต่ละถาดมีโดนัท 20 ชิ้น นำโดนัททั้งหมดมาแบ่งให้เพื่อน 6 คน คนละเท่าๆ กัน เพื่อนจะได้รับโดนัทคนละกี่ชิ้น?",
+                options: ["40 ชิ้น", "45 ชิ้น", "50 ชิ้น", "60 ชิ้น"],
+                correctIndex: 2,
+                explanation: "หาจำนวนโดนัททั้งหมด 15 × 20 = 300 ชิ้น จากนั้นนำ 300 ÷ 6 = 50 ชิ้นจ้า"
+            },
+            {
+                id: 8,
+                stage: "ด่านที่ 8: น้ำพุช็อกโกแลต (การหารมีเศษ)",
+                question: "พี่หมีต้องการแบ่งมาร์ชแมลโลว์ 125 ชิ้น ให้แก๊งลูกเพนกวิน 4 ตัว ตัวละเท่าๆ กัน เพนกวินแต่ละตัวจะได้มาร์ชแมลโลว์กี่ชิ้น และเหลือเศษกี่ชิ้น?",
+                options: [
+                    "ได้คนละ 30 ชิ้น เหลือเศษ 5 ชิ้น",
+                    "ได้คนละ 31 ชิ้น เหลือเศษ 1 ชิ้น",
+                    "ได้คนละ 31 ชิ้น เหลือเศษ 2 ชิ้น",
+                    "ได้คนละ 32 ชิ้น ไม่เหลือเศษ"
+                ],
+                correctIndex: 1,
+                explanation: "คิดคำนวณจาก 125 ÷ 4 ได้ 31 เศษ 1 จ้า"
+            },
+            {
+                id: 9,
+                stage: "ด่านที่ 9: พุดดิ้งดุ๊กดิ๊ก (ลำดับการคำนวณ)",
+                question: "ข้อใดมีผลลัพธ์ มากที่สุด?",
+                options: [
+                    "100 + 50 × 2",
+                    "(100 + 50) × 2",
+                    "400 ÷ 2 - 50",
+                    "300 - (20 × 5)"
+                ],
+                correctIndex: 1,
+                explanation: "คำนวณแต่ละข้อ: ข้อ 1 = 200, ข้อ 2 = 300, ข้อ 3 = 150, ข้อ 4 = 200 ดังนั้น ข้อ 2 มากที่สุดจ้า"
+            },
+            {
+                id: 10,
+                stage: "ด่านที่ 10: ปราสาทน้ำตาล (โจทย์ปัญหาประยุกต์)",
+                question: "น้องกระต่ายมีเงิน 500 บาท ซื้อไอศกรีมแท่งละ 35 บาท จำนวน 4 แท่ง และซื้อขนมปัง 120 บาท น้องกระต่ายจะเหลือเงินกี่บาท?",
+                options: ["220 บาท", "240 บาท", "260 บาท", "360 บาท"],
+                correctIndex: 0,
+                explanation: "คิดค่าไอศกรีม 35 × 4 = 140 บาท รวมซื้อขนม 140 + 120 = 260 บาท เหลือเงิน 500 - 260 = 220 บาทจ้า"
+            }
+        ];
+
+        /* Game State */
+        let state = {
+            currentIndex: 0,
+            score: 0,
+            hasAnswered: false,
+            shuffledQuestions: []
+        };
+
+        function showMainMenu() {
+            // ถ้ากำลังเล่นอยู่ (หน้า gameplay ยังไม่ซ่อน) ต้องยืนยันก่อน เพราะความคืบหน้าจะหายไป
+            const isPlaying = !document.getElementById('gamePlay').classList.contains('hidden');
+            if (isPlaying) {
+                const ok = confirm('ความคืบหน้าของรอบนี้จะหายไปทั้งหมด ต้องการออกจากเกมตอนนี้เลยหรือไม่?');
+                if (!ok) return;
+            }
+
+            playSound('click');
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('gamePlay').classList.add('hidden');
+            document.getElementById('gameResult').classList.add('hidden');
+            document.getElementById('btnHome').classList.add('hidden');
+            refreshStartButton();
+        }
+
+        function startGame() {
+            // ป้องกันการกดเริ่มเกมถ้าปุ่มถูกล็อกไว้ (หัวใจหมด)
+            const startBtn = document.getElementById('btn-start');
+            const restartBtn = document.getElementById('btn-restart');
+            if ((startBtn && startBtn.disabled) || (restartBtn && restartBtn.disabled)) {
+                return;
+            }
+
+            playSound('click');
+            startTime = Date.now();
+            state.currentIndex = 0;
+            state.score = 0;
+            state.hasAnswered = false;
+            
+            // Deep copy and prepare questions
+            state.shuffledQuestions = JSON.parse(JSON.stringify(questionsData));
+
+            renderQuestion();
+
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('gameResult').classList.add('hidden');
+            document.getElementById('gamePlay').classList.remove('hidden');
+            // ระหว่างเล่น ห้ามออกกลางคัน/เริ่มใหม่ จึงซ่อนปุ่มออกหน้าหลัก
+            document.getElementById('btnHome').classList.add('hidden');
+        }
+
+        function renderQuestion() {
+            const q = state.shuffledQuestions[state.currentIndex];
+            state.hasAnswered = false;
+
+            // UI updates
+            document.getElementById('currentQuestionNum').innerText = state.currentIndex + 1;
+            document.getElementById('currentScore').innerText = state.score;
+            document.getElementById('progressBar').style.width = `${((state.currentIndex + 1) / 10) * 100}%`;
+            
+            document.getElementById('stageBadge').innerText = q.stage;
+            document.getElementById('questionText').innerText = q.question;
+
+            // Feedback reset
+            const fbBox = document.getElementById('feedbackBox');
+            fbBox.classList.add('hidden');
+
+            // Render options
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = "";
+
+            // Create shuffled options mapping to keep track of correct answer
+            const optionObjects = q.options.map((optText, origIdx) => ({
+                text: optText,
+                isCorrect: origIdx === q.correctIndex
+            }));
+
+            // Shuffle choice positions
+            optionObjects.sort(() => 0.5 - Math.random());
+
+            const labels = ["ก", "ข", "ค", "ง"];
+
+            optionObjects.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-4 rounded-2xl border-4 border-pink-100 bg-white hover:bg-pink-50 hover:border-pink-300 text-slate-700 font-bold text-left transition-all shadow-sm flex items-center gap-3 group active:scale-95";
+                btn.onclick = () => handleAnswer(opt.isCorrect, btn, q.explanation);
+
+                btn.innerHTML = `
+                    <span class="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 font-extrabold flex items-center justify-center text-sm shrink-0 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+                        ${labels[idx]}
+                    </span>
+                    <span class="text-base md:text-lg">${opt.text}</span>
+                `;
+
+                grid.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(isCorrect, selectedBtn, explanation) {
+            if (state.hasAnswered) return;
+            state.hasAnswered = true;
+
+            const fbBox = document.getElementById('feedbackBox');
+            const fbIcon = document.getElementById('feedbackIcon');
+            const fbTitle = document.getElementById('feedbackTitle');
+            const fbText = document.getElementById('feedbackText');
+
+            // Disable all option buttons
+            const buttons = document.querySelectorAll('#optionsGrid button');
+            buttons.forEach(b => b.classList.add('pointer-events-none', 'opacity-60'));
+            selectedBtn.classList.remove('opacity-60');
+
+            fbBox.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-900', 'bg-rose-50', 'border-rose-200', 'text-rose-900');
+
+            if (isCorrect) {
+                playSound('correct');
+                state.score++;
+                document.getElementById('currentScore').innerText = state.score;
+
+                selectedBtn.classList.add('bg-emerald-100', 'border-emerald-400', 'text-emerald-800');
+
+                fbBox.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-900');
+                fbIcon.innerText = "🌟";
+                fbTitle.innerText = "ถูกต้องเป๊ะเลยครับ!";
+                fbText.innerText = explanation;
+            } else {
+                playSound('wrong');
+
+                selectedBtn.classList.add('bg-rose-100', 'border-rose-400', 'text-rose-800');
+
+                fbBox.classList.add('bg-rose-50', 'border-rose-200', 'text-rose-900');
+                fbIcon.innerText = "💡";
+                fbTitle.innerText = "เกือบถูกแล้วครับ!";
+                fbText.innerText = explanation;
+            }
+        }
+
+        function goToNextQuestion() {
+            playSound('click');
+            state.currentIndex++;
+
+            if (state.currentIndex < 10) {
+                renderQuestion();
+            } else {
+                finishGame();
+            }
+        }
+
+        async function finishGame() {
+            document.getElementById('gamePlay').classList.add('hidden');
+            const resultPanel = document.getElementById('gameResult');
+            resultPanel.classList.remove('hidden');
+            // ถึงหน้าสรุปผลแล้ว เปิดให้ออกหน้าหลักได้อีกครั้ง
+            document.getElementById('btnHome').classList.remove('hidden');
+
+            document.getElementById('finalScore').innerText = state.score;
+            const assessment = document.getElementById('scoreAssessmentText');
+
+            if (state.score === 10) {
+                assessment.innerText = "คะแนนเต็ม 10/10! เก่งระดับอัจฉริยะแล้วจ้า 🎉";
+                assessment.className = "text-emerald-600 font-extrabold text-base";
+            } else if (state.score >= 7) {
+                assessment.innerText = "เก่งมากเลยครับ! ผ่านเกณฑ์ระดับยอดเยี่ยม 👍";
+                assessment.className = "text-pink-600 font-extrabold text-base";
+            } else if (state.score >= 5) {
+                assessment.innerText = "ทำได้ดีครับ! ลองฝึกซ้ำอีกนิดรับรองเต็มแน่นอน 😊";
+                assessment.className = "text-amber-600 font-extrabold text-base";
+            } else {
+                assessment.innerText = "พยายามได้ดีแล้วครับ! ลองกดเล่นใหม่อีกรอบนะคนเก่ง ✌️";
+                assessment.className = "text-rose-500 font-extrabold text-base";
+            }
+
+            const statusEl = document.getElementById('summary-save-status');
+            statusEl.textContent = 'กำลังบันทึกคะแนน...';
+            await onGameFinished(state.score, 10);
+        }
+
+        async function onGameFinished(score, totalQuestions) {
+            const elapsed = getElapsedSeconds();
+            const statusEl = document.getElementById('summary-save-status');
+
+            if (window.MathGameSDK) {
+                try {
+                    const res = await MathGameSDK.submitScore(GAME_ID, score, totalQuestions, elapsed);
+                    if (res.saved) {
+                        statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                    } else if (res.reason === 'not-better') {
+                        statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                    } else if (res.reason === 'no-hearts') {
+                        statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                    } else if (res.reason === 'no-player') {
+                        statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                    } else {
+                        statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            } else {
+                statusEl.textContent = 'ไม่พบระบบบันทึกคะแนน (MathGameSDK) คะแนนนี้จะไม่ถูกบันทึก';
+            }
+
+            await refreshStartButton(); // อัปเดตปุ่มเริ่มเกม/เล่นอีกครั้งตามสถานะล่าสุด
+        }
+
+        async function refreshStartButton() {
+            const startBtn = document.getElementById('btn-start');
+            const restartBtn = document.getElementById('btn-restart');
+            if (!window.MathGameSDK) return;
+
+            const status = await MathGameSDK.getGameStatus(GAME_ID);
+            // status = { played: true/false, hearts: number|null }
+
+            let disabled, label;
+            if (!status.played) {
+                disabled = false;
+                label = '<span>🚀</span> เริ่มผจญภัยเลย!';
+            } else if (status.hearts === null || status.hearts > 0) {
+                disabled = false;
+                label = '<span>🔄</span> เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+            } else {
+                disabled = true;
+                label = '<span>💔</span> ใช้หัวใจครบแล้ว เล่นซ้ำไม่ได้';
+            }
+
+            if (startBtn) {
+                startBtn.disabled = disabled;
+                startBtn.innerHTML = label;
+            }
+            if (restartBtn) {
+                restartBtn.disabled = disabled;
+                restartBtn.innerHTML = disabled ? '💔 ใช้หัวใจครบแล้ว' : '🔄 เล่นอีกครั้ง';
+            }
+        }
+
+        // Initialize Audio trigger on user interaction + Supabase player/status sync
+        window.onload = async function() {
+            document.body.addEventListener('click', function() {
+                getAudioContext();
+            }, { once: true });
+
+            var playerBox = document.getElementById('menu-player-box');
+            if (window.MathGameSDK) {
+                var player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก ' +
+                        '<a href="' + (document.referrer || '../index.html') + '" class="underline text-pink-600 font-bold">กลับไปใส่ชื่อก่อน</a>';
+                }
+            } else {
+                playerBox.innerHTML = 'ไม่พบระบบผู้เล่น (MathGameSDK)';
+            }
+
+            await refreshStartButton();
+        };
+    </script>
+</body>
+</html>
