@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ห้องเรียนคณิตศาสตร์แสนสนุกครูนุช</title>
+<title>ห้องเรียนคณิตศาสตร์แสนสนุกคุณครู [...]</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;800&family=Fredoka:wght@400;500;600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Lottie Player for Animations -->
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<!-- Supabase client + shared game SDK (used for player name, hearts, leaderboard) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="assets/mathgame-sdk.js"></script>
 <style>
   /* --- Global Styles --- */
   :root {
@@ -627,6 +630,171 @@
     .coin-float-badge { top: auto; bottom: 16px; right: 16px; font-size: 0.8rem; padding: 7px 12px; }
   }
 
+  /* =========================================================
+     LEADERBOARD
+     ========================================================= */
+  .leaderboard-section {
+    padding: 70px 5vw;
+    background-color: #F3F0FF;
+  }
+
+  .leaderboard-container {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .lb-name-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow-subtle);
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .lb-name-prompt {
+    margin: 0 0 14px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+  }
+
+  .lb-name-form {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .lb-name-input {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 1rem;
+    padding: 10px 18px;
+    border-radius: 50px;
+    border: 2px solid rgba(46,42,74,0.12);
+    outline: none;
+    width: 240px;
+    max-width: 70vw;
+    transition: border-color 0.2s;
+  }
+
+  .lb-name-input:focus { border-color: var(--primary-blue); }
+
+  .lb-name-save-btn {
+    font-family: 'Kanit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 10px 26px;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255,206,84,0.4);
+    transition: transform 0.2s;
+  }
+
+  .lb-name-save-btn:hover { transform: translateY(-2px); }
+
+  .lb-me-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #fff;
+    border-radius: 50px;
+    padding: 10px 20px;
+    box-shadow: var(--shadow-subtle);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+    flex-wrap: wrap;
+  }
+
+  .lb-change-name-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.82rem;
+    color: #9b97b5;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .lb-change-name-btn:hover { color: var(--accent-pink); }
+
+  .lb-hearts {
+    font-size: 1rem;
+    letter-spacing: 2px;
+  }
+
+  .lb-board {
+    background: #fff;
+    border-radius: 20px;
+    padding: 10px 12px;
+    box-shadow: var(--shadow-subtle);
+  }
+
+  .lb-status {
+    text-align: center;
+    color: #9b97b5;
+    font-size: 0.9rem;
+    padding: 20px 0;
+    margin: 0;
+  }
+
+  .lb-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .lb-list li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .lb-list li:nth-child(odd) { background: var(--bg-light); }
+
+  .lb-list li.lb-me { outline: 2px solid var(--primary-blue); }
+
+  .lb-rank {
+    font-family: 'Kanit', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    width: 34px;
+    text-align: center;
+    color: #9b97b5;
+    flex-shrink: 0;
+  }
+
+  .lb-list li:nth-child(1) .lb-rank,
+  .lb-list li:nth-child(2) .lb-rank,
+  .lb-list li:nth-child(3) .lb-rank { font-size: 1.4rem; }
+
+  .lb-name {
+    flex: 1;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 600;
+    color: var(--text-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lb-coins {
+    font-family: 'Kanit', sans-serif;
+    font-weight: 700;
+    color: var(--primary-blue);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 600px) {
+    .leaderboard-section { padding: 50px 5vw; }
+    .lb-name-input { width: 100%; }
+  }
+
   /* --- Game Section --- */
   .games-section {
     padding: 60px 5vw 100px;
@@ -824,7 +992,7 @@
   <header class="top-nav">
     <a href="#home" class="nav-brand">
       <div class="nav-logo"><span>🧮</span></div>
-      <div class="nav-title">ห้องเรียนครูนุช</div>
+      <div class="nav-title">ห้องเรียนครู[...]</div>
     </a>
     <nav class="nav-links">
       <a href="#home" class="nav-link"><span class="nav-emoji">🏠</span>หน้าแรก</a>
@@ -859,7 +1027,7 @@
       <div class="hero-text">
         <span class="hero-eyebrow">✦ สำหรับนักเรียนชั้นประถมศึกษาปีที่ 4-6</span>
         <h1><span class="hero-word">เรียนรู้สุดสนุก</span><br><span class="hero-word">ไปกับ</span> <span class="hero-word hero-highlight">เกมคณิตศาสตร์</span></h1>
-        <p>ยินดีต้อนรับสู่ห้องเรียนออนไลน์ครูนุช<br>มาผจญภัยในโลกของตัวเลขและรูปทรงกันเถอะ!</p>
+        <p>ยินดีต้อนรับสู่ห้องเรียนออนไลน์ของคุณครู [...]<br>มาผจญภัยในโลกของตัวเลขและรูปทรงกันเถอะ!</p>
         <a href="#games" class="hero-btn">เริ่มเล่นเกม 🚀</a>
       </div>
 
@@ -896,8 +1064,8 @@
 
           <!-- teacher caption -->
           <div class="teacher-caption">
-            <strong>ครูนุช (นงนุช ชัยคุณา)</strong>
-            โรงเรียนวัดสันกลางเหนือ
+            <strong>ครู [...]</strong>
+            โรงเรียน [...]
           </div>
         </div>
       </div>
@@ -947,6 +1115,21 @@
     </div>
   </section>
 
+  <!-- Leaderboard Section -->
+  <section id="leaderboard" class="leaderboard-section">
+    <div class="leaderboard-container">
+      <div class="section-header">
+        <h2>🏆 กระดาน<span>ผู้นำ</span></h2>
+        <p>รวมคะแนนทุกเกม ใครเก่งที่สุด มาดูกัน!</p>
+      </div>
+
+      <div class="lb-board" id="lbBoard">
+        <p class="lb-status" id="lbStatus">กำลังโหลดกระดานผู้นำ...</p>
+        <ol class="lb-list" id="lbList"></ol>
+      </div>
+    </div>
+  </section>
+
   <!-- Game Grid Section -->
   <section id="games" class="games-section">
     <div class="games-bg-sparkle">
@@ -959,6 +1142,22 @@
         </div>
         <h2>คณิตศาสตร์<span>แสนสนุก</span></h2>
         <p>เลือกด่านที่อยากผจญภัย แล้วไปลุยกันเลย!</p>
+      </div>
+
+      <!-- Name entry card: shown when this browser hasn't set a nickname yet -->
+      <div class="lb-name-card" id="lbNameCard">
+        <p class="lb-name-prompt">ใส่ชื่อเล่นของหนูก่อนเริ่มเล่น เพื่อบันทึกคะแนนขึ้นกระดานผู้นำ (ไม่ต้องสมัครสมาชิก ไม่ต้องใส่รหัสผ่าน)</p>
+        <div class="lb-name-form">
+          <input type="text" id="lbNameInput" class="lb-name-input" placeholder="ชื่อเล่น เช่น น้องพลอย" maxlength="20">
+          <button type="button" id="lbNameSave" class="lb-name-save-btn">บันทึกชื่อ</button>
+        </div>
+      </div>
+
+      <!-- Shown once a nickname is saved -->
+      <div class="lb-me-card" id="lbMeCard" style="display:none;">
+        <span>สวัสดี, <strong id="lbMeName"></strong> 👋</span>
+        <span class="lb-hearts" id="lbHearts" title="หัวใจสำหรับเล่นซ้ำเพื่อทำคะแนนใหม่"></span>
+        <button type="button" id="lbChangeName" class="lb-change-name-btn">เปลี่ยนชื่อ</button>
       </div>
 
       <div class="game-grid">
@@ -1074,8 +1273,8 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="footer-content">
-      <p>&copy; 2024 ห้องเรียนออนไลน์ครูนุช สงวนลิขสิทธิ์</p>
-      <p>โรงเรียนวัดสันกลางเหนือ</p>
+      <p>&copy; 2024 ห้องเรียนออนไลน์คุณครู [...] สงวนลิขสิทธิ์</p>
+      <p>โรงเรียน [...]</p>
     </div>
   </footer>
 
@@ -1235,6 +1434,9 @@
           card.classList.remove('visited');
         }
       });
+
+      // let the leaderboard module know the current coin count changed
+      window.dispatchEvent(new CustomEvent('mathcoins:update', { detail: { count: count } }));
     }
 
     cards.forEach(function (card) {
@@ -1264,6 +1466,171 @@
     }
 
     render();
+  })();
+  </script>
+
+  <!-- ============================================================
+       LEADERBOARD (Supabase)
+       Fill in SUPABASE_URL and SUPABASE_ANON_KEY below with your
+       own project's values (Supabase dashboard -> Project Settings
+       -> API). The anon key is meant to be public / used in the
+       browser like this, as long as Row Level Security policies
+       are set up (see the SQL provided separately).
+       ============================================================ -->
+  <!-- ============================================================
+       PLAYER SETUP (name + hearts) — lives in the games section.
+       LEADERBOARD — reads the `leaderboard_totals` view, which sums
+       every player's score/time across all games (see supabase_setup.sql).
+       Uses assets/mathgame-sdk.js for the actual Supabase connection —
+       configure your project's keys there (one place for the whole site).
+       ============================================================ -->
+  <script>
+  (function () {
+    var TOP_N = 10;
+
+    var nameCard = document.getElementById('lbNameCard');
+    var nameInput = document.getElementById('lbNameInput');
+    var nameSaveBtn = document.getElementById('lbNameSave');
+    var meCard = document.getElementById('lbMeCard');
+    var meNameEl = document.getElementById('lbMeName');
+    var heartsEl = document.getElementById('lbHearts');
+    var changeNameBtn = document.getElementById('lbChangeName');
+    var statusEl = document.getElementById('lbStatus');
+    var listEl = document.getElementById('lbList');
+
+    var NAME_KEY = 'mathClassPlayerName';
+
+    function getSavedName() {
+      try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; }
+    }
+
+    function heartsHtml(n) {
+      if (n === null || n === undefined) return '';
+      var full = '❤️'.repeat(Math.max(0, n));
+      var empty = '🤍'.repeat(Math.max(0, 3 - n));
+      return full + empty;
+    }
+
+    function formatTime(totalSeconds) {
+      var s = Math.max(0, Math.round(totalSeconds || 0));
+      var m = Math.floor(s / 60);
+      var r = s % 60;
+      return m + ':' + (r < 10 ? '0' : '') + r;
+    }
+
+    function medalFor(rank) {
+      if (rank === 1) return '🥇';
+      if (rank === 2) return '🥈';
+      if (rank === 3) return '🥉';
+      return rank;
+    }
+
+    // update every game card's link so the game knows who's playing
+    function updateGameLinks() {
+      var player = window.MathGameSDK ? window.MathGameSDK.getPlayer() : null;
+      if (!player || !player.name) return;
+      document.querySelectorAll('.game-card[data-gid]').forEach(function (card) {
+        var url = new URL(card.getAttribute('href'), window.location.href);
+        url.searchParams.set('name', player.name);
+        url.searchParams.set('device', player.device);
+        card.setAttribute('href', url.toString());
+      });
+    }
+
+    async function showNameUI() {
+      var name = getSavedName();
+      if (name) {
+        nameCard.style.display = 'none';
+        meCard.style.display = 'flex';
+        meNameEl.textContent = name;
+        updateGameLinks();
+        if (window.MathGameSDK) {
+          var hearts = await window.MathGameSDK.getHearts();
+          heartsEl.innerHTML = heartsHtml(hearts);
+        }
+      } else {
+        nameCard.style.display = 'block';
+        meCard.style.display = 'none';
+      }
+    }
+
+    async function loadBoard() {
+      var client = window.MathGameSDK && window.MathGameSDK.getClient();
+      if (!client) {
+        statusEl.textContent = 'ยังไม่ได้เชื่อมต่อกระดานผู้นำ (รอครูตั้งค่า Supabase ใน assets/mathgame-sdk.js)';
+        statusEl.style.display = 'block';
+        listEl.innerHTML = '';
+        return;
+      }
+      try {
+        var res = await client
+          .from('leaderboard_totals')
+          .select('device_id, name, total_score, total_possible, total_time_seconds, games_played')
+          .gt('games_played', 0)
+          .order('total_score', { ascending: false })
+          .order('total_time_seconds', { ascending: true })
+          .limit(TOP_N);
+
+        if (res.error) throw res.error;
+
+        var rows = res.data || [];
+        if (rows.length === 0) {
+          statusEl.textContent = 'ยังไม่มีใครเล่นจบเกมเลย เป็นคนแรกกันเถอะ!';
+          statusEl.style.display = 'block';
+          listEl.innerHTML = '';
+          return;
+        }
+
+        statusEl.style.display = 'none';
+        var myDevice = window.MathGameSDK ? window.MathGameSDK.getPlayer().device : '';
+        listEl.innerHTML = rows.map(function (row, i) {
+          var rank = i + 1;
+          var isMe = row.device_id === myDevice;
+          var safeName = String(row.name || 'นักเรียน').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return '<li class="' + (isMe ? 'lb-me' : '') + '">' +
+            '<span class="lb-rank">' + medalFor(rank) + '</span>' +
+            '<span class="lb-name">' + safeName + (isMe ? ' (คุณ)' : '') + '</span>' +
+            '<span class="lb-coins">' + row.total_score + '/' + row.total_possible +
+              ' &nbsp;⏱️ ' + formatTime(row.total_time_seconds) + '</span>' +
+            '</li>';
+        }).join('');
+      } catch (e) {
+        console.warn('leaderboard load failed', e);
+        statusEl.textContent = 'โหลดกระดานผู้นำไม่สำเร็จ ลองรีเฟรชหน้าใหม่อีกครั้ง';
+        statusEl.style.display = 'block';
+        listEl.innerHTML = '';
+      }
+    }
+
+    if (nameSaveBtn) {
+      nameSaveBtn.addEventListener('click', function () {
+        var name = (nameInput.value || '').trim();
+        if (!name) {
+          nameInput.focus();
+          return;
+        }
+        try { localStorage.setItem(NAME_KEY, name); } catch (e) {}
+        showNameUI();
+        loadBoard();
+      });
+      nameInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') nameSaveBtn.click();
+      });
+    }
+
+    if (changeNameBtn) {
+      changeNameBtn.addEventListener('click', function () {
+        nameInput.value = getSavedName();
+        nameCard.style.display = 'block';
+        meCard.style.display = 'none';
+        nameInput.focus();
+      });
+    }
+
+    showNameUI();
+    loadBoard();
+    // periodic refresh so classmates' scores update without a manual reload
+    setInterval(loadBoard, 45000);
   })();
   </script>
 
