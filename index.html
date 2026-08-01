@@ -10,7 +10,7 @@
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 <!-- Supabase client + shared game SDK (used for player name, hearts, leaderboard) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="assets/mathgame-sdk.js"></script>
+<script src="mathgame-sdk.js"></script>
 <style>
   /* --- Global Styles --- */
   :root {
@@ -1481,7 +1481,7 @@
        PLAYER SETUP (name + hearts) — lives in the games section.
        LEADERBOARD — reads the `leaderboard_totals` view, which sums
        every player's score/time across all games (see supabase_setup.sql).
-       Uses assets/mathgame-sdk.js for the actual Supabase connection —
+       Uses mathgame-sdk.js for the actual Supabase connection —
        configure your project's keys there (one place for the whole site).
        ============================================================ -->
   <script>
@@ -1557,7 +1557,7 @@
     async function loadBoard() {
       var client = window.MathGameSDK && window.MathGameSDK.getClient();
       if (!client) {
-        statusEl.textContent = 'ยังไม่ได้เชื่อมต่อกระดานผู้นำ (รอครูตั้งค่า Supabase ใน assets/mathgame-sdk.js)';
+        statusEl.textContent = 'ยังไม่ได้เชื่อมต่อกระดานผู้นำ (รอครูตั้งค่า Supabase ใน mathgame-sdk.js)';
         statusEl.style.display = 'block';
         listEl.innerHTML = '';
         return;
