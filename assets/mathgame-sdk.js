@@ -11,7 +11,7 @@
    ============================================================ */
 (function (global) {
   var SUPABASE_URL = 'https://dighrbbikdloxszbepee.supabase.co';         // e.g. https://xxxxxxxx.supabase.co
-  var SUPABASE_ANON_KEY = 'b_publishable_A3MPkcB74wHi7deZ5xEOlg_V9xXH_gK';
+  var SUPABASE_ANON_KEY = 'sb_publishable_A3MPkcB74wHi7deZ5xEOlg_V9xXH_gK';
   var HEARTS_DEFAULT = 3;
 
   var NAME_KEY = 'mathClassPlayerName';
