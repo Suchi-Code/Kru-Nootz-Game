@@ -85,6 +85,7 @@
                         ท้าทายทักษะ บวก ลบ คูณ หาร และโจทย์ระคนสุดสนุก 10 ข้อ พิชิตขนมหวานแสนอร่อยไปด้วยกัน!
                     </p>
                     <div id="menu-player-box" class="text-sm font-semibold text-slate-500 bg-white/70 inline-block px-4 py-1.5 rounded-full border border-pink-200 shadow-sm"></div>
+                    <div id="start-banner" style="display:none;" class="max-w-xl mx-auto text-sm md:text-base font-bold px-5 py-3 rounded-2xl border-2 shadow-sm text-left items-start gap-2"></div>
                     <div class="pt-4">
                         <button id="btn-start" onclick="startGame()" class="px-8 py-4 rounded-3xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold text-xl shadow-xl border-b-4 border-rose-700 active:scale-95 transition-all flex items-center gap-3 mx-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-pink-500 disabled:hover:to-rose-500">
                             <span>🚀</span> เริ่มผจญภัยเลย!
@@ -174,13 +175,13 @@
 
             <p id="summary-save-status" class="text-sm font-semibold text-slate-500"></p>
 
-            <!-- Actions -->
+            <!-- Actions: ตามสเปกข้อ 7 ต้องมีแค่ 2 ปุ่มนี้เท่านั้น -->
             <div class="grid grid-cols-2 gap-3 pt-4">
-                <button id="btn-restart" onclick="startGame()" class="py-3 bg-pink-500 hover:bg-pink-600 text-white font-extrabold rounded-2xl shadow-md border-b-4 border-pink-700 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-pink-500">
+                <button id="btn-restart" onclick="restartCurrentGame()" class="py-3 bg-pink-500 hover:bg-pink-600 text-white font-extrabold rounded-2xl shadow-md border-b-4 border-pink-700 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-pink-500">
                     🔄 เล่นอีกครั้ง
                 </button>
-                <button onclick="showMainMenu()" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-2xl shadow-sm border border-slate-300 transition-all text-sm">
-                    🏠 กลับหน้าแรก
+                <button onclick="goHome()" class="py-3 bg-slate-700 hover:bg-slate-800 text-white font-extrabold rounded-2xl shadow-md transition-all text-sm">
+                    🏠 ปิดเกม (กลับหน้าหลัก)
                 </button>
             </div>
         </div>
@@ -203,6 +204,13 @@
 
         function getElapsedSeconds() {
             return startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+        }
+
+        // ปุ่ม "ปิดเกม (กลับหน้าหลัก)" ที่หน้าสรุปผล — ต้องใช้ได้เสมอ ไม่ล็อกตามสถานะหัวใจ
+        // เพื่อให้ผู้เล่นมีทางออกจากเกมได้แม้เล่นซ้ำไม่ได้แล้ว
+        function goHome() {
+            playSound('click');
+            window.location.href = document.referrer || '../index.html';
         }
 
         /* Web Audio API Sound Generator */
@@ -370,11 +378,11 @@
         };
 
         function showMainMenu() {
-            // ถ้ากำลังเล่นอยู่ (หน้า gameplay ยังไม่ซ่อน) ต้องยืนยันก่อน เพราะความคืบหน้าจะหายไป
+            // ตามสเปกข้อ 6: ระหว่างเล่น (currentScreen === 'gameplay') ต้องไม่มีทางออกเลย
+            // ปุ่ม/ไอคอนที่เรียกฟังก์ชันนี้ระหว่างเล่นจะไม่ทำงาน ต้องตอบให้ครบทุกข้อก่อน
             const isPlaying = !document.getElementById('gamePlay').classList.contains('hidden');
             if (isPlaying) {
-                const ok = confirm('ความคืบหน้าของรอบนี้จะหายไปทั้งหมด ต้องการออกจากเกมตอนนี้เลยหรือไม่?');
-                if (!ok) return;
+                return;
             }
 
             playSound('click');
@@ -383,6 +391,10 @@
             document.getElementById('gameResult').classList.add('hidden');
             document.getElementById('btnHome').classList.add('hidden');
             refreshStartButton();
+        }
+
+        function restartCurrentGame() {
+            startGame();
         }
 
         function startGame() {
@@ -407,7 +419,7 @@
             document.getElementById('mainMenu').classList.add('hidden');
             document.getElementById('gameResult').classList.add('hidden');
             document.getElementById('gamePlay').classList.remove('hidden');
-            // ระหว่างเล่น ห้ามออกกลางคัน/เริ่มใหม่ จึงซ่อนปุ่มออกหน้าหลัก
+            // ระหว่างเล่น ห้ามออกกลางคัน/เริ่มใหม่ จึงซ่อนปุ่มออกหน้าหลัก ไม่มีทางออกจนกว่าจะตอบครบทุกข้อ
             document.getElementById('btnHome').classList.add('hidden');
         }
 
@@ -568,21 +580,39 @@
         async function refreshStartButton() {
             const startBtn = document.getElementById('btn-start');
             const restartBtn = document.getElementById('btn-restart');
+            const banner = document.getElementById('start-banner');
             if (!window.MathGameSDK) return;
 
             const status = await MathGameSDK.getGameStatus(GAME_ID);
             // status = { played: true/false, hearts: number|null }
 
-            let disabled, label;
+            let disabled, label, restartLabel;
             if (!status.played) {
+                // ยังไม่เคยเล่นจบเกมนี้ — เล่นได้ปกติ ไม่เสียหัวใจ
                 disabled = false;
                 label = '<span>🚀</span> เริ่มผจญภัยเลย!';
+                restartLabel = '🔄 เล่นอีกครั้ง';
+                if (banner) banner.style.display = 'none';
             } else if (status.hearts === null || status.hearts > 0) {
+                // เคยเล่นแล้ว แต่ยังมีหัวใจ — เล่นซ้ำได้ (เสียหัวใจเฉพาะถ้าทำคะแนน/เวลาดีขึ้น)
                 disabled = false;
                 label = '<span>🔄</span> เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+                restartLabel = '🔄 เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+                if (banner) {
+                    banner.className = 'max-w-xl mx-auto text-sm md:text-base font-bold px-5 py-3 rounded-2xl border-2 shadow-sm text-left flex items-start gap-2 bg-amber-50 border-amber-300 text-amber-800';
+                    banner.style.display = 'flex';
+                    banner.innerHTML = '<span class="text-xl leading-none">💛</span><span>คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)</span>';
+                }
             } else {
+                // เคยเล่นแล้ว และหัวใจหมด — ล็อกปุ่ม ห้ามเริ่มรอบใหม่
                 disabled = true;
-                label = '<span>💔</span> ใช้หัวใจครบแล้ว เล่นซ้ำไม่ได้';
+                label = '<span>💔</span> ใช้หัวใจครบแล้ว';
+                restartLabel = '💔 ใช้หัวใจครบแล้ว';
+                if (banner) {
+                    banner.className = 'max-w-xl mx-auto text-sm md:text-base font-bold px-5 py-3 rounded-2xl border-2 shadow-sm text-left flex items-start gap-2 bg-rose-50 border-rose-300 text-rose-700';
+                    banner.style.display = 'flex';
+                    banner.innerHTML = '<span class="text-xl leading-none">💔</span><span>เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ</span>';
+                }
             }
 
             if (startBtn) {
@@ -591,7 +621,7 @@
             }
             if (restartBtn) {
                 restartBtn.disabled = disabled;
-                restartBtn.innerHTML = disabled ? '💔 ใช้หัวใจครบแล้ว' : '🔄 เล่นอีกครั้ง';
+                restartBtn.innerHTML = restartLabel;
             }
         }
 
