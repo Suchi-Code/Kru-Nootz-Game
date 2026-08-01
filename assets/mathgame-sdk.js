@@ -158,9 +158,31 @@
     }
   }
 
+  // Call this BEFORE showing the "start/play again" button, so the game
+  // can lock replay once a result already exists (unless hearts remain).
+  // Returns { played: bool, hearts: number|null }
+  async function getGameStatus(gameId) {
+    var supa = getClient();
+    var player = getPlayer();
+    if (!supa || !player.device) return { played: false, hearts: null };
+    try {
+      var existing = await supa.from('game_results')
+        .select('id')
+        .eq('device_id', player.device)
+        .eq('game_id', gameId)
+        .maybeSingle();
+      var hearts = await getHearts();
+      return { played: !!existing.data, hearts: hearts };
+    } catch (e) {
+      console.warn('getGameStatus failed', e);
+      return { played: false, hearts: null };
+    }
+  }
+
   global.MathGameSDK = {
     getPlayer: getPlayer,
     getHearts: getHearts,
+    getGameStatus: getGameStatus,
     submitScore: submitScore,
     getClient: getClient,
     isConfigured: function () { return !!getClient(); }
