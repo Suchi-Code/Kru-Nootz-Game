@@ -64,7 +64,20 @@
     if (!supa || !deviceId) return null;
     try {
       var existing = await supa.from('players').select('hearts_remaining, name').eq('device_id', deviceId).maybeSingle();
-      if (existing.data) return existing.data;
+      if (existing.data) {
+        // Row already exists for this device — if the player just typed
+        // a different name (e.g. via "เปลี่ยนชื่อ"), push it to Supabase
+        // too, otherwise the old name would be stuck there forever.
+        if (name && name !== existing.data.name) {
+          var updated = await supa.from('players')
+            .update({ name: name })
+            .eq('device_id', deviceId)
+            .select('hearts_remaining, name')
+            .maybeSingle();
+          if (updated.data) return updated.data;
+        }
+        return existing.data;
+      }
       var insertPayload = { device_id: deviceId, name: name || 'นักเรียน', hearts_remaining: HEARTS_DEFAULT };
       var created = await supa.from('players').insert(insertPayload).select('hearts_remaining, name').maybeSingle();
       return created.data;
