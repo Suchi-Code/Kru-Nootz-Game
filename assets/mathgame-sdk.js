@@ -20,8 +20,7 @@
   var client = null;
   function getClient() {
     if (client) return client;
-    var configured = SUPABASE_URL.indexOf('https://dighrbbikdloxszbepee.supabase.co') === -1 &&
-                      SUPABASE_ANON_KEY.indexOf('b_publishable_A3MPkcB74wHi7deZ5xEOlg_V9xXH_gK') === -1;
+    var configured = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
     if (configured && global.supabase && global.supabase.createClient) {
       client = global.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
