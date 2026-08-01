@@ -759,6 +759,15 @@
 
   .lb-list li.lb-me { outline: 2px solid var(--primary-blue); }
 
+  .lb-list li.lb-divider {
+    justify-content: center;
+    color: #9b97b5;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    background: none !important;
+  }
+
   .lb-rank {
     font-family: 'Kanit', sans-serif;
     font-weight: 800;
@@ -1162,7 +1171,7 @@
 
       <div class="game-grid">
         <!-- Game Cards (1-26) -->
-        <a href="./assets/game1.html" class="game-card card-color-1" target="_blank" rel="noopener" data-gid="1"><span class="visited-mark">🪙</span>
+        <a href="./game/game1.html" class="game-card card-color-1" target="_blank" rel="noopener" data-gid="1"><span class="visited-mark">🪙</span>
           <div><div class="icon">🔵.</div><h3>เกมประมาณค่าทศนิยม</h3><p class="title-en">Decimal Estimation Game</p></div>
           <p>ฝึกประมาณค่าทศนิยมให้แม่นยำ!</p>
         </a>
@@ -1487,6 +1496,7 @@
   <script>
   (function () {
     var TOP_N = 10;
+    var FETCH_LIMIT = 500; // enough to cover any realistic class size; raise if needed
 
     var nameCard = document.getElementById('lbNameCard');
     var nameInput = document.getElementById('lbNameInput');
@@ -1554,6 +1564,17 @@
       }
     }
 
+    function renderRow(row, rank, isMe) {
+      var safeName = String(row.name || 'นักเรียน').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return '<li class="' + (isMe ? 'lb-me' : '') + '">' +
+        '<span class="lb-rank">' + medalFor(rank) + '</span>' +
+        '<span class="lb-name">' + safeName + (isMe ? ' (คุณ)' : '') + '</span>' +
+        '<span class="lb-coins">' + row.total_score + '/' + row.total_possible +
+          ' &nbsp;⏱️ ' + formatTime(row.total_time_seconds) +
+          ' &nbsp;🎮 เล่นแล้ว ' + row.games_played + ' เกม</span>' +
+        '</li>';
+    }
+
     async function loadBoard() {
       var client = window.MathGameSDK && window.MathGameSDK.getClient();
       if (!client) {
@@ -1569,7 +1590,7 @@
           .gt('games_played', 0)
           .order('total_score', { ascending: false })
           .order('total_time_seconds', { ascending: true })
-          .limit(TOP_N);
+          .limit(FETCH_LIMIT);
 
         if (res.error) throw res.error;
 
@@ -1583,17 +1604,21 @@
 
         statusEl.style.display = 'none';
         var myDevice = window.MathGameSDK ? window.MathGameSDK.getPlayer().device : '';
-        listEl.innerHTML = rows.map(function (row, i) {
-          var rank = i + 1;
-          var isMe = row.device_id === myDevice;
-          var safeName = String(row.name || 'นักเรียน').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          return '<li class="' + (isMe ? 'lb-me' : '') + '">' +
-            '<span class="lb-rank">' + medalFor(rank) + '</span>' +
-            '<span class="lb-name">' + safeName + (isMe ? ' (คุณ)' : '') + '</span>' +
-            '<span class="lb-coins">' + row.total_score + '/' + row.total_possible +
-              ' &nbsp;⏱️ ' + formatTime(row.total_time_seconds) + '</span>' +
-            '</li>';
+        var myIndex = rows.findIndex(function (r) { return r.device_id === myDevice; });
+        var myRank = myIndex === -1 ? null : myIndex + 1;
+
+        var html = rows.slice(0, TOP_N).map(function (row, i) {
+          return renderRow(row, i + 1, row.device_id === myDevice);
         }).join('');
+
+        // If the current player has a score but isn't in the top 10,
+        // show a divider then their own row with their real rank.
+        if (myRank !== null && myRank > TOP_N) {
+          html += '<li class="lb-divider">⋯</li>';
+          html += renderRow(rows[myIndex], myRank, true);
+        }
+
+        listEl.innerHTML = html;
       } catch (e) {
         console.warn('leaderboard load failed', e);
         statusEl.textContent = 'โหลดกระดานผู้นำไม่สำเร็จ ลองรีเฟรชหน้าใหม่อีกครั้ง';
