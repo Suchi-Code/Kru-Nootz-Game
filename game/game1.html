@@ -228,10 +228,12 @@
                 </div>
             </div>
 
+            <!-- Shown only when this device already has a saved result for this game -->
+            <div id="btn-start-menu-banner" class="hidden rounded-2xl border-2 p-3 text-sm font-semibold text-center"></div>
+
             <button onclick="startGame(2)" id="btn-start-menu" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-2xl shadow-md transition btn-bounce flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fa-solid fa-play"></i> <span id="btn-start-menu-label">เริ่มเล่นเกม</span>
             </button>
-            <div class="text-center text-xs text-slate-400" id="btn-start-menu-note"></div>
 
             <div class="text-center text-xs text-slate-400">
                 พัฒนาขึ้นมาตามหลักสูตรแกนกลางกลุ่มสาระการเรียนรู้คณิตศาสตร์ (ระดับประถมศึกษาปีที่ 4 - 5)
@@ -405,7 +407,7 @@
                     <i class="fa-solid fa-rotate-left"></i> <span id="btn-restart-summary-label">เล่นอีกครั้ง</span>
                 </button>
                 <button onclick="goHome()" class="bg-sky-400 hover:bg-sky-500 text-white font-bold py-3.5 rounded-2xl shadow-md transition btn-bounce flex items-center justify-center gap-1.5 text-sm">
-                    <i class="fa-solid fa-house"></i> กลับหน้าหลัก
+                    <i class="fa-solid fa-house"></i> ปิดเกม (กลับหน้าหลัก)
                 </button>
             </div>
         </div>
@@ -442,7 +444,8 @@
 
             let locked = false;
             let label = 'เริ่มเล่นเกม';
-            let note = '';
+            let bannerHtml = '';
+            let bannerClass = '';
 
             if (!status.played) {
                 locked = false;
@@ -450,20 +453,33 @@
             } else if (status.hearts === null || status.hearts > 0) {
                 locked = false;
                 label = 'เล่นอีกครั้ง' + (status.hearts !== null ? ' (เหลือ ' + status.hearts + ' หัวใจ)' : '');
+                bannerClass = 'bg-amber-50 border-amber-300 text-amber-800';
+                bannerHtml = '<i class="fa-solid fa-triangle-exclamation"></i> คุณเล่นเกมนี้ไปแล้ว! ' +
+                    'ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ' +
+                    (status.hearts !== null ? ' (ตอนนี้เหลือ ' + status.hearts + ' ดวง)' : '');
             } else {
                 locked = true;
                 label = 'ใช้หัวใจครบแล้ว';
-                note = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวง จะเล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้แล้วนะ';
+                bannerClass = 'bg-red-50 border-red-300 text-red-700';
+                bannerHtml = '<i class="fa-solid fa-heart-crack"></i> เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
             }
 
             gameState.canPlay = !locked;
 
             var menuBtn = document.getElementById('btn-start-menu');
             var menuLabel = document.getElementById('btn-start-menu-label');
-            var menuNote = document.getElementById('btn-start-menu-note');
+            var menuBanner = document.getElementById('btn-start-menu-banner');
             if (menuBtn) menuBtn.disabled = locked;
             if (menuLabel) menuLabel.textContent = label;
-            if (menuNote) menuNote.textContent = note;
+            if (menuBanner) {
+                if (bannerHtml) {
+                    menuBanner.className = 'rounded-2xl border-2 p-3 text-sm font-semibold text-center ' + bannerClass;
+                    menuBanner.innerHTML = bannerHtml;
+                } else {
+                    menuBanner.className = 'hidden';
+                    menuBanner.innerHTML = '';
+                }
+            }
 
             var restartBtn = document.getElementById('btn-restart-summary');
             var restartLabel = document.getElementById('btn-restart-summary-label');
