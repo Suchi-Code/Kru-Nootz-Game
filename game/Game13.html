@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เกมผจญภัยหาค่าประมาณ ป.4</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* {
+  box-sizing: border-box;
+  font-family: 'Sarabun', 'Chakra Petch', sans-serif;
+}
+body {
+  background: linear-gradient(135deg, #a8edd8 0%, #25aae1 100%);
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.game-container {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #333;
+}
+.hearts { 
+  color: #ff4757; 
+  font-size: 1.4rem;
+  letter-spacing: 2px;
+}
+.progress {
+  color: #70a1ff;
+  font-size: 1.1rem;
+}
+.score { 
+  color: #2ed573; 
+  font-size: 1.3rem;
+}
+
+/* แถบเวลาและตัวเลขเวลา */
+.timer-container {
+  margin-bottom: 15px;
+}
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 1rem;
+  color: #57606f;
+  margin-bottom: 5px;
+}
+.timer-text {
+  font-weight: bold;
+  color: #ff4757;
+}
+.progress-bar-bg {
+  width: 100%;
+  height: 12px;
+  background-color: #dfe4ea;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 100%;
+  background-color: #2ed573;
+  transition: width 1s linear, background-color 0.3s ease;
+}
+
+.question-box {
+  background: #f1f2f6;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  border: 3px solid #70a1ff;
+}
+.question-title {
+  font-size: 1.2rem;
+  color: #57606f;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+.number-display {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #1e90ff;
+}
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.btn-option {
+  background: #ffffff;
+  border: 2px solid #ced6e0;
+  padding: 15px;
+  font-size: 1.3rem;
+  font-weight: bold;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #2f3542;
+}
+.btn-option:hover:not(:disabled) {
+  background: #eccc68;
+  border-color: #ffa502;
+  transform: translateY(-2px);
+}
+.btn-option:disabled {
+  cursor: default;
+}
+.btn-option.correct {
+  background: #2ed573 !important;
+  color: white !important;
+  border-color: #2ed573 !important;
+}
+.btn-option.wrong {
+  background: #ff4757 !important;
+  color: white !important;
+  border-color: #ff4757 !important;
+}
+.feedback {
+  height: 35px;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+.btn-restart {
+  background: #ff6b81;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 1.2rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 15px;
+  transition: background 0.2s;
+}
+.btn-restart:hover { background: #ff4757; }
+.hidden { display: none; }
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body>
+
+<div class="game-container">
+  <!-- หน้าจอเริ่มต้น -->
+  <div id="screen-start" style="text-align:center;">
+    <h2 style="margin-bottom:10px;">เกมผจญภัยหาค่าประมาณ ป.4</h2>
+    <div id="sdk-player-box" style="font-size:0.9rem;color:#333;margin-bottom:8px;"></div>
+    <div id="sdk-start-banner" style="display:none;background:#FFF3CD;border:2px solid #FFB300;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.9rem;color:#7A4E00;"></div>
+    <button class="btn-restart" id="sdk-start-btn" onclick="startGame()">เริ่มเล่น 🚀</button>
+  </div>
+  <!-- หน้าจอเล่นเกม -->
+  <div id="game-screen" class="hidden">
+    <div class="header">
+      <div class="hearts" id="hearts">❤️❤️❤️</div>
+      <div class="progress">ข้อที่ <span id="question-count">1</span>/10</div>
+      <div class="score">คะแนน: <span id="score">0</span></div>
+    </div>
+
+    <!-- ตัวนับถอยหลัง -->
+    <div class="timer-container">
+      <div class="timer-header">
+        <span>⏱️ เวลาคงเหลือ</span>
+        <span class="timer-text"><span id="timer-count">20</span> วินาที</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="timer-bar"></div>
+      </div>
+    </div>
+
+    <div class="question-box">
+      <div class="question-title" id="question-text">จงหาค่าประมาณ...</div>
+      <div class="number-display" id="target-number">000</div>
+    </div>
+
+    <div class="options-grid" id="options-container"></div>
+    <div class="feedback" id="feedback-text"></div>
+  </div>
+
+  <!-- หน้าจอสรุปผล -->
+  <div id="result-screen" class="hidden">
+    <h2>🎉 จบการแข่งขัน! 🎉</h2>
+    <p style="font-size: 1.5rem;">คะแนนรวมของคุณ: <b id="final-score" style="color: #1e90ff;">0</b> / 10 คะแนน</p>
+    <p id="star-rating" style="font-size: 2.5rem; margin: 10px 0;"></p>
+    <div id="sdk-save-status" style="font-size:0.9rem;color:#555;margin-top:8px;"></div>
+    <button class="btn-restart" onclick="restartCurrentGame()">เล่นอีกครั้ง 🔄</button>
+    <button class="btn-restart" style="background:#57606f;" onclick="goHome()">ปิดเกม (กลับหน้าหลัก) 🏠</button>
+  </div>
+</div>
+
+<script>
+let score = 0;
+let lives = 3;
+let questionNumber = 0;
+const TOTAL_QUESTIONS = 10;
+const TIME_LIMIT = 20; // 20 วินาทีต่อข้อ
+let timeLeft = TIME_LIMIT;
+let timerInterval = null;
+let currentAnswer = 0;
+let isClickable = true;
+
+const types = [
+  { name: "จำนวนเต็มสิบ", value: 10 },
+  { name: "จำนวนเต็มร้อย", value: 100 },
+  { name: "จำนวนเต็มพัน", value: 1000 },
+  { name: "จำนวนเต็มหมื่น", value: 10000 },
+  { name: "จำนวนเต็มแสน", value: 100000 }
+];
+
+function startGame() {
+  __sdkStartTime = Date.now();
+  score = 0;
+  lives = 3;
+  questionNumber = 0;
+  isClickable = true;
+  document.getElementById('score').innerText = score;
+  document.getElementById('feedback-text').innerText = "";
+  document.getElementById('screen-start').classList.add('hidden');
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  updateHearts();
+  nextQuestion();
+}
+
+function updateHearts() {
+  document.getElementById('hearts').innerText = '❤️'.repeat(lives);
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIME_LIMIT;
+  updateTimerUI();
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      handleTimeout();
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  document.getElementById('timer-count').innerText = timeLeft;
+  const percentage = (timeLeft / TIME_LIMIT) * 100;
+  const timerBar = document.getElementById('timer-bar');
+  timerBar.style.width = `${percentage}%`;
+
+  // เปลี่ยนสีแถบเวลาเมื่อเหลือน้อยกว่า 6 วินาที
+  if (timeLeft <= 5) {
+    timerBar.style.backgroundColor = '#ff4757';
+  } else if (timeLeft <= 10) {
+    timerBar.style.backgroundColor = '#ffa502';
+  } else {
+    timerBar.style.backgroundColor = '#2ed573';
+  }
+}
+
+function generateQuestion() {
+  questionNumber++;
+  document.getElementById('question-count').innerText = questionNumber;
+
+  const type = types[Math.floor(Math.random() * types.length)];
+  const base = Math.floor(Math.random() * 899999) + 10000;
+  currentAnswer = Math.round(base / type.value) * type.value;
+
+  document.getElementById('question-text').innerText = `หาค่าประมาณเป็น ${type.name} ของ`;
+  document.getElementById('target-number').innerText = base.toLocaleString('th-TH');
+
+  let options = new Set([currentAnswer]);
+  while(options.size < 4) {
+    let offset = (Math.floor(Math.random() * 5) - 2) * type.value;
+    let wrongOpt = currentAnswer + offset;
+    if(wrongOpt > 0 && wrongOpt !== currentAnswer) {
+      options.add(wrongOpt);
+    }
+  }
+
+  const optionsArray = Array.from(options).sort(() => Math.random() - 0.5);
+  const container = document.getElementById('options-container');
+  container.innerHTML = '';
+
+  optionsArray.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-option';
+    btn.innerText = opt.toLocaleString('th-TH');
+    btn.setAttribute('data-value', opt);
+    btn.onclick = () => checkAnswer(btn, opt);
+    container.appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function checkAnswer(btn, selected) {
+  if (!isClickable) return;
+  isClickable = false;
+  clearInterval(timerInterval);
+
+  const feedback = document.getElementById('feedback-text');
+  const allButtons = document.querySelectorAll('.btn-option');
+
+  allButtons.forEach(b => b.disabled = true);
+
+  if (selected === currentAnswer) {
+    btn.classList.add('correct');
+    feedback.innerText = "✨ ถูกต้องครับ!";
+    feedback.style.color = "#2ed573";
+    score += 1;
+    document.getElementById('score').innerText = score;
+  } else {
+    btn.classList.add('wrong');
+    allButtons.forEach(b => {
+      if (parseInt(b.getAttribute('data-value')) === currentAnswer) {
+        b.classList.add('correct');
+      }
+    });
+    feedback.innerText = "❌ ยังไม่ถูกต้อง!";
+    feedback.style.color = "#ff4757";
+    lives--;
+    updateHearts();
+  }
+
+  setTimeout(() => {
+    feedback.innerText = "";
+    isClickable = true;
+    
+    if (lives > 0 && questionNumber < TOTAL_QUESTIONS) {
+      nextQuestion();
+    } else {
+      endGame();
+    }
+  }, 1400);
+}
+
+function handleTimeout() {
+  if (!isClickable) return;
+  isClickable = false;
+
+  const feedback = document.getElementById('feedback-text');
+  const allButtons = document.querySelectorAll('.btn-option');
+
+  allButtons.forEach(b => {
+    b.disabled = true;
+    if (parseInt(b.getAttribute('data-value')) === currentAnswer) {
+      b.classList.add('correct');
+    }
+  });
+
+  feedback.innerText = "⏰ หมดเวลา!";
+  feedback.style.color = "#ff4757";
+  lives--;
+  updateHearts();
+
+  setTimeout(() => {
+    feedback.innerText = "";
+    isClickable = true;
+
+    if (lives > 0 && questionNumber < TOTAL_QUESTIONS) {
+      nextQuestion();
+    } else {
+      endGame();
+    }
+  }, 1400);
+}
+
+function nextQuestion() {
+  generateQuestion();
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  sdkSubmitScore(score, TOTAL_QUESTIONS);
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('result-screen').classList.remove('hidden');
+  document.getElementById('final-score').innerText = score;
+
+  let stars = "⭐";
+  if (score >= 5) stars = "⭐⭐";
+  if (score >= 8) stars = "⭐⭐⭐";
+  if (score === 10) stars = "🌟⭐⭐⭐🌟";
+  document.getElementById('star-rating').innerText = stars;
+}
+
+</script>
+
+
+<script>
+/* ===================== MathGame SDK Integration ===================== */
+const GAME_ID = 'game13';
+let __sdkStartTime = null;
+
+function getElapsedSeconds() {
+  return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+}
+
+async function refreshStartButton() {
+  const btn = document.getElementById('sdk-start-btn');
+  const banner = document.getElementById('sdk-start-banner');
+  if (!window.MathGameSDK || !btn || !banner) return;
+  try {
+    const status = await MathGameSDK.getGameStatus(GAME_ID);
+    if (!status.played) {
+      btn.disabled = false;
+      banner.style.display = 'none';
+    } else if (status.hearts === null || status.hearts > 0) {
+      btn.disabled = false;
+      banner.style.display = 'block';
+      banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+    } else {
+      btn.disabled = true;
+      banner.style.display = 'block';
+      banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+    }
+  } catch (e) {}
+}
+
+async function sdkSubmitScore(finalScore, totalQuestions) {
+  const statusEl = document.getElementById('sdk-save-status');
+  const elapsed = getElapsedSeconds();
+  if (window.MathGameSDK) {
+    try {
+      const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+      if (statusEl) {
+        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+    }
+  }
+  await refreshStartButton();
+}
+
+function restartCurrentGame() {
+  startGame();
+}
+
+function goHome() {
+  window.location.href = document.referrer || '../index.html';
+}
+
+window.addEventListener('load', async function () {
+  const playerBox = document.getElementById('sdk-player-box');
+  if (window.MathGameSDK && playerBox) {
+    const player = MathGameSDK.getPlayer();
+    if (player && player.name) {
+      playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+    } else {
+      playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+    }
+  }
+  await refreshStartButton();
+});
+</script>
+</body>
+</html>

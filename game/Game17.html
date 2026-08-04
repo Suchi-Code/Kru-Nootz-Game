@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมคณิตศาสตร์: ตะลุยโลกชนิดของมุม (Types of Angles)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Animate.css สำหรับเอฟเฟกต์แอนิเมชัน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts - Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #fef3c7 0%, #ffedd5 100%);
+        }
+        .btn-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Container หลัก -->
+    <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-white w-full max-w-2xl overflow-hidden p-6 relative">
+
+        <!-- 1. หน้าเมนูหลัก (Main Menu) -->
+        <div id="screen-menu" class="text-center py-8 animate__animated animate__fadeIn">
+            <div class="inline-block p-4 bg-amber-100 rounded-full mb-4 shadow-inner">
+                <i data-lucide="protractor" class="w-16 h-16 text-amber-600"></i>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-800 mb-2">พิชิตชนิดของมุม 📐</h1>
+            <p class="text-slate-600 mb-6 text-base sm:text-lg">ทดสอบความรู้และจำแนกชนิดของมุมทั้ง 5 ชนิดกันเลย!</p>
+
+            <div id="sdk-player-box" class="text-sm text-amber-700 mb-2"></div>
+            <div id="sdk-start-banner" class="hidden bg-amber-50 border-2 border-amber-300 rounded-xl p-3 mb-3 text-sm text-amber-800 max-w-md mx-auto"></div>
+
+            <!-- สรุปนิยามมุม 5 ชนิด -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 max-w-md mx-auto mb-8 text-left text-sm text-slate-700 space-y-1.5">
+                <p class="font-bold text-amber-900 flex items-center gap-2 mb-2">
+                    <i data-lucide="book-open" class="w-4 h-4 text-amber-600"></i> สรุปความรู้เรื่องชนิดของมุม:
+                </p>
+                <p>• <strong>มุมแหลม (Acute):</strong> มากกว่า $0^\circ$ แต่น้อยกว่า $90^\circ$</p>
+                <p>• <strong>มุมฉาก (Right):</strong> มีขนาดพอดี $90^\circ$</p>
+                <p>• <strong>มุมป้าน (Obtuse):</strong> มากกว่า $90^\circ$ แต่น้อยกว่า $180^\circ$</p>
+                <p>• <strong>มุมตรง (Straight):</strong> มีขนาดพอดี $180^\circ$</p>
+                <p>• <strong>มุมกลับ (Reflex):</strong> มากกว่า $180^\circ$ แต่น้อยกว่า $360^\circ$</p>
+            </div>
+
+            <button id="sdk-start-btn" onclick="startGame()" class="btn-hover bg-amber-500 hover:bg-amber-600 text-white text-lg font-bold py-4 px-10 rounded-2xl shadow-lg shadow-amber-200 inline-flex items-center gap-3">
+                <i data-lucide="play-circle" class="w-7 h-7"></i> เริ่มเล่นเกม (10 ข้อ)
+            </button>
+        </div>
+
+        <!-- 2. หน้าเล่นเกม (Game Screen) -->
+        <div id="screen-game" class="hidden animate__animated animate__fadeIn">
+            <!-- Header: แถบความคืบหน้า และ คะแนน -->
+            <div class="flex items-center justify-between mb-4">
+                <div></div>
+                <div class="text-sm font-semibold text-slate-500">
+                    ข้อที่ <span id="current-question-num" class="text-amber-600 text-lg font-bold">1</span> / 10
+                </div>
+                <div class="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <i data-lucide="star" class="w-4 h-4 fill-amber-500 text-amber-500"></i> คะแนน: <span id="current-score">0</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden mb-6">
+                <div id="progress-bar" class="bg-amber-500 h-full w-0 transition-all duration-300"></div>
+            </div>
+
+            <!-- กล่องคำถาม -->
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-6 text-center">
+                <h2 id="question-text" class="text-base sm:text-lg font-bold text-slate-800 mb-3"></h2>
+                
+                <!-- พื้นที่แสดงรูปภาพ SVG หรือ ข้อความองศาขนาดใหญ่ -->
+                <div id="question-display" class="w-full h-60 flex items-center justify-center bg-white rounded-xl shadow-inner border border-slate-200 relative overflow-hidden">
+                    <!-- SVG หรือ Text จะถูกใส่ผ่าน JS -->
+                </div>
+            </div>
+
+            <!-- ตัวเลือกคำตอบ 4 ปุ่ม -->
+            <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <!-- ปุ่มสร้างผ่าน JavaScript -->
+            </div>
+
+            <!-- ส่วนแสดง Feedback และคำอธิบาย -->
+            <div id="feedback-box" class="hidden p-4 rounded-xl text-center mb-4 animate__animated animate__fadeInUp">
+                <p id="feedback-text" class="font-semibold text-sm sm:text-base"></p>
+                <button id="next-btn" onclick="nextQuestion()" class="mt-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2 px-6 rounded-xl btn-hover text-sm inline-flex items-center gap-2">
+                    ข้อถัดไป <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. หน้าสรุปคะแนน (Summary Screen) -->
+        <div id="screen-summary" class="hidden text-center py-8 animate__animated animate__zoomIn">
+            <div class="inline-block p-4 bg-amber-100 rounded-full mb-4 shadow-inner">
+                <i data-lucide="trophy" class="w-16 h-16 text-amber-500"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">ทดสอบเรียบร้อย!</h1>
+            <p class="text-slate-600 mb-6">สรุปผลการตอบคำถามเรื่องชนิดของมุม</p>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 max-w-sm mx-auto mb-8 shadow-sm">
+                <div class="text-5xl font-black text-amber-500 mb-2" id="final-score">0 / 10</div>
+                <p id="final-eval" class="text-slate-700 font-bold text-lg"></p>
+                <div id="sdk-save-status" class="text-sm text-slate-500 mt-2"></div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                <button onclick="restartCurrentGame()" class="btn-hover bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-amber-200 flex-1 flex items-center justify-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i> เล่นอีกครั้ง
+                </button>
+                <button onclick="goHome()" class="btn-hover bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl flex-1 flex items-center justify-center gap-2">
+                    <i data-lucide="home" class="w-5 h-5"></i> ปิดเกม (กลับหน้าหลัก)
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript LOGIC -->
+    <script>
+        // --- ตัวแปรประเภทของมุมหลักทั้ง 5 ชนิด ---
+        const ANGLE_TYPES = {
+            ACUTE: "มุมแหลม",
+            RIGHT: "มุมฉาก",
+            OBTUSE: "มุมป้าน",
+            STRAIGHT: "มุมตรง",
+            REFLEX: "มุมกลับ"
+        };
+
+        const ALL_ANGLE_NAMES = [
+            ANGLE_TYPES.ACUTE,
+            ANGLE_TYPES.RIGHT,
+            ANGLE_TYPES.OBTUSE,
+            ANGLE_TYPES.STRAIGHT,
+            ANGLE_TYPES.REFLEX
+        ];
+
+        // คำอธิบายคำตอบในแต่ละมุม
+        const EXPLANATIONS = {
+            [ANGLE_TYPES.ACUTE]: "มุมแหลม คือ มุมที่มีขนาดมากกว่า 0° แต่น้อยกว่า 90°",
+            [ANGLE_TYPES.RIGHT]: "มุมฉาก คือ มุมที่มีขนาดเท่ากับ 90° พอดี",
+            [ANGLE_TYPES.OBTUSE]: "มุมป้าน คือ มุมที่มีขนาดมากกว่า 90° แต่น้อยกว่า 180°",
+            [ANGLE_TYPES.STRAIGHT]: "มุมตรง คือ มุมที่มีขนาดเท่ากับ 180° พอดี",
+            [ANGLE_TYPES.REFLEX]: "มุมกลับ คือ มุมที่มีขนาดมากกว่า 180° แต่น้อยกว่า 360°"
+        };
+
+        // --- Game State ---
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        // --- ฟังก์ชันช่วยเหลือ ---
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // --- คำนวณชนิดมุมจากองศาจริง ---
+        function getAngleTypeFromDegrees(deg) {
+            if (deg > 0 && deg < 90) return ANGLE_TYPES.ACUTE;
+            if (deg === 90) return ANGLE_TYPES.RIGHT;
+            if (deg > 90 && deg < 180) return ANGLE_TYPES.OBTUSE;
+            if (deg === 180) return ANGLE_TYPES.STRAIGHT;
+            if (deg > 180 && deg < 360) return ANGLE_TYPES.REFLEX;
+            return ANGLE_TYPES.ACUTE;
+        }
+
+        // --- สุ่มสร้างคลังโจทย์ 10 ข้อ (ผสมโจทย์ดูรูปภาพ และ โจทย์ตัวเลข) ---
+        function generateQuestions() {
+            const qList = [];
+
+            for (let i = 0; i < 10; i++) {
+                // สุ่มชนิดโจทย์: true = ดูรูปภาพ SVG, false = ตัวเลขข้อความ
+                const isVisual = Math.random() < 0.5;
+                
+                // สุ่มชนิดมุมเป้าหมาย (0-4) เพื่อกระจายความหลากหลาย
+                const category = i % 5; 
+                let degrees = 0;
+
+                switch (category) {
+                    case 0: // มุมแหลม
+                        degrees = getRandomInt(15, 80);
+                        break;
+                    case 1: // มุมฉาก
+                        degrees = 90;
+                        break;
+                    case 2: // มุมป้าน
+                        degrees = getRandomInt(100, 165);
+                        break;
+                    case 3: // มุมตรง
+                        degrees = 180;
+                        break;
+                    case 4: // มุมกลับ
+                        degrees = getRandomInt(195, 340);
+                        break;
+                }
+
+                const correctAnswer = getAngleTypeFromDegrees(degrees);
+
+                // สุ่มสร้าง 4 ตัวเลือก (คำตอบถูก 1 ตัว + คำตอบหลอก 3 ตัว)
+                const wrongOptions = ALL_ANGLE_NAMES.filter(name => name !== correctAnswer);
+                const selectedWrong = shuffleArray(wrongOptions).slice(0, 3);
+                const options = shuffleArray([correctAnswer, ...selectedWrong]);
+
+                qList.push({
+                    isVisual: isVisual,
+                    degrees: degrees,
+                    correctAnswer: correctAnswer,
+                    explanation: EXPLANATIONS[correctAnswer],
+                    options: options
+                });
+            }
+
+            return shuffleArray(qList);
+        }
+
+        // --- ฟังก์ชันวาด SVG รูปมุมตามองศาจริง ---
+        function generateAngleSVG(deg) {
+            const width = 300;
+            const height = 220;
+            const centerX = 150;
+            const centerY = 130;
+            const rayLength = 90;
+            const arcRadius = 30;
+
+            // สุ่มมุมเริ่มต้นของแขนแรก (Base Angle) ให้หมุนเปลี่ยนทิศทางไดนามิก
+            const baseAngleDeg = getRandomInt(0, 35);
+            const startRad = (baseAngleDeg * Math.PI) / 180;
+            const endRad = ((baseAngleDeg + deg) * Math.PI) / 180;
+
+            // พิกัดแขนที่ 1 (ฐาน) - พิกัด SVG แกน Y ชี้ลงล่าง
+            const x1 = centerX + rayLength * Math.cos(startRad);
+            const y1 = centerY - rayLength * Math.sin(startRad);
+
+            // พิกัดแขนที่ 2
+            const x2 = centerX + rayLength * Math.cos(endRad);
+            const y2 = centerY - rayLength * Math.sin(endRad);
+
+            // พิกัดส่วนโค้ง Arc
+            const ax1 = centerX + arcRadius * Math.cos(startRad);
+            const ay1 = centerY - arcRadius * Math.sin(startRad);
+            const ax2 = centerX + arcRadius * Math.cos(endRad);
+            const ay2 = centerY - arcRadius * Math.sin(endRad);
+
+            const largeArcFlag = deg > 180 ? 1 : 0;
+            const sweepFlag = 0; // ทิศทวนเข็มนาฬิกาในพิกัดคาร์ทีเซียน
+
+            let arcPath = "";
+            let rightSquareHTML = "";
+
+            if (deg === 90) {
+                // มุมฉาก: วาดสัญลักษณ์สี่เหลี่ยมมุมฉาก
+                const sqLen = 16;
+                const px1 = centerX + sqLen * Math.cos(startRad);
+                const py1 = centerY - sqLen * Math.sin(startRad);
+                const px2 = centerX + sqLen * Math.cos(endRad);
+                const py2 = centerY - sqLen * Math.sin(endRad);
+                const pxMid = px1 + (px2 - centerX);
+                const pyMid = py1 + (py2 - centerY);
+
+                rightSquareHTML = `
+                    <polyline points="${px1},${py1} ${pxMid},${pyMid} ${px2},${py2}" 
+                              class="fill-none stroke-amber-600 stroke-2" />
+                `;
+            } else {
+                // มุมอื่นๆ: วาดเส้นส่วนโค้ง
+                arcPath = `
+                    <path d="M ${ax1} ${ay1} A ${arcRadius} ${arcRadius} 0 ${largeArcFlag} ${sweepFlag} ${ax2} ${ay2}" 
+                          class="fill-none stroke-amber-500 stroke-2 stroke-dasharray-[3,3]" />
+                `;
+            }
+
+            return `
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-full max-w-[280px]">
+                    <!-- เส้นส่วนโค้ง/สัญลักษณ์มุมฉาก -->
+                    ${arcPath}
+                    ${rightSquareHTML}
+
+                    <!-- แขนของมุม เส้นที่ 1 -->
+                    <line x1="${centerX}" y1="${centerY}" x2="${x1}" y2="${y1}" class="stroke-slate-700 stroke-[3.5] stroke-linecap-round" />
+                    <circle cx="${x1}" cy="${y1}" r="4" class="fill-slate-700" />
+
+                    <!-- แขนของมุม เส้นที่ 2 -->
+                    <line x1="${centerX}" y1="${centerY}" x2="${x2}" y2="${y2}" class="stroke-slate-700 stroke-[3.5] stroke-linecap-round" />
+                    <circle cx="${x2}" cy="${y2}" r="4" class="fill-slate-700" />
+
+                    <!-- จุดยอดมุม (Vertex) -->
+                    <circle cx="${centerX}" cy="${centerY}" r="6" class="fill-amber-500 stroke-white stroke-2" />
+                </svg>
+            `;
+        }
+
+        // --- ระบบควบคุมการดำเนินเกม ---
+
+        function startGame() {
+            __sdkStartTime = Date.now();
+            questions = generateQuestions();
+            currentQuestionIndex = 0;
+            score = 0;
+
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-summary').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            const q = questions[currentQuestionIndex];
+
+            // อัปเดตข้อมูล UI
+            document.getElementById('current-question-num').textContent = currentQuestionIndex + 1;
+            document.getElementById('current-score').textContent = score;
+            document.getElementById('progress-bar').style.width = `${(currentQuestionIndex / 10) * 100}%`;
+            document.getElementById('feedback-box').classList.add('hidden');
+
+            const qText = document.getElementById('question-text');
+            const qDisplay = document.getElementById('question-display');
+
+            if (q.isVisual) {
+                // หมวดโจทย์ดูรูปภาพ
+                qText.textContent = "จากรูปที่กำหนดให้ เป็นมุมชนิดใด?";
+                qDisplay.innerHTML = generateAngleSVG(q.degrees);
+            } else {
+                // หมวดโจทย์ตัวเลขข้อความ
+                qText.textContent = `มุมที่มีขนาด ${q.degrees}° คือมุมชนิดใด?`;
+                qDisplay.innerHTML = `
+                    <div class="text-center animate__animated animate__bounceIn">
+                        <span class="text-5xl sm:text-6xl font-black text-amber-500 drop-shadow-sm">${q.degrees}°</span>
+                        <p class="text-slate-400 text-sm mt-2">พิจารณาขนาดของมุมแล้วเลือกคำตอบ</p>
+                    </div>
+                `;
+            }
+
+            // สร้างปุ่มตัวเลือก 4 ปุ่ม
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full btn-hover bg-white hover:bg-slate-50 text-slate-700 font-bold py-3.5 px-4 rounded-xl border-2 border-slate-200 text-left flex items-center justify-between text-sm sm:text-base shadow-sm transition-all";
+                btn.innerHTML = `<span>${opt}</span> <i data-lucide="circle" class="w-5 h-5 text-slate-300 opt-icon"></i>`;
+                btn.onclick = () => checkAnswer(opt, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            lucide.createIcons();
+        }
+
+        function checkAnswer(selectedOption, selectedBtn) {
+            if (isAnswered) return; // ป้องกันการกดซ้ำ
+            isAnswered = true;
+
+            const q = questions[currentQuestionIndex];
+            const allButtons = document.getElementById('options-container').children;
+            const feedbackBox = document.getElementById('feedback-box');
+            const feedbackText = document.getElementById('feedback-text');
+
+            if (selectedOption === q.correctAnswer) {
+                // ตอบถูก
+                score++;
+                document.getElementById('current-score').textContent = score;
+                selectedBtn.className = "w-full bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl border-2 border-emerald-600 text-left flex items-center justify-between text-sm sm:text-base shadow-lg animate__animated animate__rubberBand";
+                selectedBtn.querySelector('.opt-icon').replaceWith(createIconNode('check-circle-2'));
+
+                feedbackBox.className = "p-4 rounded-xl text-center mb-4 bg-emerald-100 border border-emerald-300 text-emerald-900 animate__animated animate__fadeInUp";
+                feedbackText.innerHTML = `🎉 <strong>ถูกต้อง!</strong> ${q.explanation}`;
+            } else {
+                // ตอบผิด
+                selectedBtn.className = "w-full bg-rose-500 text-white font-bold py-3.5 px-4 rounded-xl border-2 border-rose-600 text-left flex items-center justify-between text-sm sm:text-base shadow-lg animate__animated animate__shakeX";
+                selectedBtn.querySelector('.opt-icon').replaceWith(createIconNode('x-circle'));
+
+                // ไฮไลต์ปุ่มเฉลยที่ถูกต้อง
+                Array.from(allButtons).forEach(btn => {
+                    if (btn.querySelector('span').textContent.trim() === q.correctAnswer) {
+                        btn.className = "w-full bg-emerald-100 text-emerald-800 font-bold py-3.5 px-4 rounded-xl border-2 border-emerald-500 text-left flex items-center justify-between text-sm sm:text-base";
+                    }
+                });
+
+                feedbackBox.className = "p-4 rounded-xl text-center mb-4 bg-rose-100 border border-rose-300 text-rose-900 animate__animated animate__fadeInUp";
+                feedbackText.innerHTML = `😅 <strong>ยังไม่ถูกต้อง!</strong> คำตอบคือ <strong>${q.correctAnswer}</strong><br><span class="text-sm font-normal text-rose-800">${q.explanation}</span>`;
+            }
+
+            feedbackBox.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function createIconNode(iconName) {
+            const i = document.createElement('i');
+            i.setAttribute('data-lucide', iconName);
+            i.className = "w-5 h-5";
+            return i;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < 10) {
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            sdkSubmitScore(score, 10);
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-summary').classList.remove('hidden');
+
+            document.getElementById('final-score').textContent = `${score} / 10`;
+            
+            // ประเมินผลคะแนน
+            const evalText = document.getElementById('final-eval');
+            if (score === 10) evalText.textContent = "🏆 ยอดเยี่ยมระดับเซียน! จำแนกประเภทมุมได้ถูกต้องแม่นยำครบทุกข้อ";
+            else if (score >= 7) evalText.textContent = "🌟 เก่งมากๆ! มีความเข้าใจเรื่องชนิดของมุมดีมาก";
+            else if (score >= 5) evalText.textContent = "👍 ทำได้ดี! ทบทวนเรื่องมุมกลับและมุมป้านอีกนิดจะเก่งยิ่งขึ้น";
+            else evalText.textContent = "✌️ ลองพยายามอีกนิดนะครับ กดเล่นอีกครั้งเพื่อฝึกฝนทักษะ!";
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function showMenu() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-summary').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+        }
+
+        // เริ่มต้นโหลด Lucide Icons
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+        });
+    
+
+        /* ===================== MathGame SDK Integration ===================== */
+        const GAME_ID = 'game17';
+        let __sdkStartTime = null;
+
+        function getElapsedSeconds() {
+            return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+        }
+
+        async function refreshStartButton() {
+            const btn = document.getElementById('sdk-start-btn');
+            const banner = document.getElementById('sdk-start-banner');
+            if (!window.MathGameSDK || !btn || !banner) return;
+            try {
+                const status = await MathGameSDK.getGameStatus(GAME_ID);
+                if (!status.played) {
+                    btn.disabled = false;
+                    banner.classList.add('hidden');
+                } else if (status.hearts === null || status.hearts > 0) {
+                    btn.disabled = false;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+                } else {
+                    btn.disabled = true;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+                }
+            } catch (e) {}
+        }
+
+        async function sdkSubmitScore(finalScore, totalQuestions) {
+            const statusEl = document.getElementById('sdk-save-status');
+            const elapsed = getElapsedSeconds();
+            if (window.MathGameSDK) {
+                try {
+                    const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+                    if (statusEl) {
+                        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            }
+            await refreshStartButton();
+        }
+
+        function restartCurrentGame() {
+            startGame();
+        }
+
+        function goHome() {
+            window.location.href = document.referrer || '../index.html';
+        }
+
+        window.addEventListener('load', async function () {
+            const playerBox = document.getElementById('sdk-player-box');
+            if (window.MathGameSDK && playerBox) {
+                const player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+                }
+            }
+            await refreshStartButton();
+        });
+</script>
+</body>
+</html>

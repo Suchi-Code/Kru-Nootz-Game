@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ภารกิจพิชิตมาตราส่วน Level 1 - Easy Mode</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&family=Mali:wght@600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --primary-bg: #E0F7FA;
+            --card-bg: #FFFFFF;
+            --accent-yellow: #FFD54F;
+            --accent-orange: #FF8A65;
+            --accent-green: #81C784;
+            --accent-blue: #4FC3F7;
+            --text-dark: #2C3E50;
+            --shadow: 0 10px 25px rgba(0,0,0,0.12);
+            --radius: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Kanit', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            color: var(--text-dark);
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 850px;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 5px solid #FFF;
+            position: relative;
+            min-height: 620px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Screen Controller */
+        .screen {
+            display: none;
+            padding: 25px;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* UI Elements */
+        .game-title {
+            font-family: 'Mali', cursive;
+            font-size: 2.6rem;
+            color: #2E7D32;
+            text-shadow: 2px 2px 0px #C8E6C9;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #00796B;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .btn {
+            background: linear-gradient(180deg, #66BB6A 0%, #43A047 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #1B5E20;
+            transition: all 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 #1B5E20;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #1B5E20;
+        }
+
+        .btn-yellow {
+            background: linear-gradient(180deg, #FFCA28 0%, #FFA000 100%);
+            color: #3E2723;
+            box-shadow: 0 5px 0 #E65100;
+        }
+        .btn-yellow:hover { box-shadow: 0 7px 0 #E65100; }
+        .btn-yellow:active { box-shadow: 0 2px 0 #E65100; }
+
+        .btn-blue {
+            background: linear-gradient(180deg, #29B6F6 0%, #0288D1 100%);
+            box-shadow: 0 5px 0 #01579B;
+        }
+        .btn-blue:hover { box-shadow: 0 7px 0 #01579B; }
+        .btn-blue:active { box-shadow: 0 2px 0 #01579B; }
+
+        input[type="text"] {
+            padding: 10px 18px;
+            font-size: 1.3rem;
+            border: 3px solid #A5D6A7;
+            border-radius: 15px;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+            width: 180px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #2E7D32;
+            box-shadow: 0 0 10px rgba(46, 125, 50, 0.3);
+        }
+
+        /* Avatar */
+        .character-img {
+            width: 140px;
+            height: 140px;
+            background: #E8F5E9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 70px;
+            margin: 15px 0;
+            border: 4px dashed #81C784;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* HUD Header */
+        .hud-header {
+            width: 100%;
+            background: #E8F5E9;
+            padding: 12px 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: 2px solid #A5D6A7;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background: #C8E6C9;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #66BB6A, #2E7D32);
+            transition: width 0.4s ease;
+        }
+
+        /* Game Layout */
+        .game-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            gap: 15px;
+        }
+
+        .map-viewport {
+            width: 100%;
+            height: 220px;
+            background: #F1F8E9;
+            border-radius: 16px;
+            border: 3px solid #81C784;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .question-card {
+            background: #FFF;
+            border-radius: 16px;
+            padding: 18px 20px;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 2px solid #E0E0E0;
+            text-align: center;
+            font-size: 1.15rem;
+            line-height: 1.6;
+        }
+
+        .answer-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .hint-box {
+            background: #FFFDE7;
+            border: 2px dashed #FBC02D;
+            border-radius: 12px;
+            padding: 10px 15px;
+            width: 100%;
+            margin-top: 10px;
+            display: none;
+            color: #F57F17;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s;
+        }
+
+        /* Modal Feedback */
+        .modal {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: var(--shadow);
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .feedback-icon { font-size: 4rem; margin-bottom: 10px; }
+
+        /* Summary Screen */
+        .summary-card {
+            background: #FFF;
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            margin: 15px 0;
+            border: 3px solid #81C784;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            background: #F1F8E9;
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .trophy-badge { font-size: 4rem; margin: 5px 0; }
+
+        @media (max-width: 768px) {
+            .game-title { font-size: 2rem; }
+            .hud-header { font-size: 0.8rem; flex-wrap: wrap; gap: 5px; }
+            .map-viewport { height: 180px; }
+            .question-card { font-size: 1rem; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body>
+
+<div class="game-container">
+
+    <!-- 1. Start Screen -->
+    <div id="screen-start" class="screen active">
+        <h1 class="game-title">ภารกิจพิชิตมาตราส่วน</h1>
+        <p class="subtitle">"Level 1 : ออกเดินทาง คำนวณระยะทาง และพิชิตทุกเส้นทาง!"</p>
+
+        <div id="sdk-player-box" style="font-size:0.9rem;color:#2E7D32;margin-bottom:8px;"></div>
+        <div id="sdk-start-banner" style="display:none;background:#FFF9C4;border:2px solid #FBC02D;border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:0.9rem;color:#795500;max-width:480px;"></div>
+        
+        <div class="character-img">
+            <i class="fa-solid fa-compass" style="color: #2E7D32;"></i>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="player-name" style="font-weight: 600; font-size: 1.1rem; display: block; margin-bottom: 5px;">ชื่อนักสำรวจของคุณ:</label>
+            <input type="text" id="player-name" placeholder="กรอกชื่อที่นี่" value="นักสำรวจน้อย">
+        </div>
+
+        <div>
+            <button class="btn" id="sdk-start-btn" onclick="startGame()"><i class="fa-solid fa-play"></i> เริ่มเกม (EASY)</button>
+            <button class="btn btn-yellow" onclick="showRules()"><i class="fa-solid fa-book"></i> วิธีเล่น</button>
+        </div>
+    </div>
+
+    <!-- 2. Gameplay Screen -->
+    <div id="screen-game" class="screen">
+        <div class="hud-header">
+            <span><i class="fa-solid fa-user"></i> <span id="hud-name">นักสำรวจ</span></span>
+            <span><i class="fa-solid fa-layer-group"></i> ระดับ: EASY</span>
+            <span><i class="fa-solid fa-list-check"></i> ข้อ <span id="hud-progress">1</span>/10</span>
+            <span><i class="fa-solid fa-star" style="color: #FBC02D;"></i> <span id="hud-score">0</span> คะแนน</span>
+        </div>
+
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <div class="game-layout">
+            <!-- Dynamic SVG Map Graphic -->
+            <div class="map-viewport" id="map-viewport"></div>
+
+            <!-- Question & Input Card -->
+            <div class="question-card">
+                <p id="question-text">กำลังเตรียมภารกิจ...</p>
+
+                <div class="answer-area">
+                    <span>คำตอบ:</span>
+                    <input type="text" id="answer-input" placeholder="กรอกตัวเลข" autocomplete="off" onkeydown="if(event.key==='Enter') checkAnswer()">
+                    <span id="unit-label">เซนติเมตร</span>
+                </div>
+
+                <div class="hint-box" id="hint-box">
+                    <i class="fa-solid fa-lightbulb"></i> <span id="hint-text">คำใบ้...</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 10px; width: 100%; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-yellow" style="font-size: 1rem; padding: 10px 20px;" onclick="useHint()"><i class="fa-solid fa-lightbulb"></i> ขอคำใบ้ (-2 คะแนน)</button>
+                <button class="btn" onclick="checkAnswer()"><i class="fa-solid fa-circle-check"></i> ตรวจคำตอบ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Result Summary Screen -->
+    <div id="screen-summary" class="screen">
+        <h2 style="font-family: 'Mali', cursive; color: #2E7D32; font-size: 2rem;">สรุปผลการผจญภัย Level 1</h2>
+        
+        <div class="summary-card">
+            <div class="trophy-badge" id="summary-trophy">🏆</div>
+            <h3 id="summary-title" style="color: #0288D1; margin-bottom: 8px; font-family: 'Mali', cursive;">นักสำรวจระดับปรมาจารย์</h3>
+            <p id="summary-player" style="font-weight: 600; color: #555;">ผู้เล่น: นักสำรวจ</p>
+
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div>คะแนนรวม</div>
+                    <div class="stat-value" id="summary-score">0</div>
+                </div>
+                <div class="stat-item">
+                    <div>ตอบถูกต้อง</div>
+                    <div class="stat-value" id="summary-correct">0/10</div>
+                </div>
+                <div class="stat-item">
+                    <div>คิดเป็น</div>
+                    <div class="stat-value" id="summary-percent">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div>เวลาที่ใช้</div>
+                    <div class="stat-value" id="summary-time">0s</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sdk-save-status" style="font-size:0.9rem;color:#555;margin-bottom:8px;"></div>
+
+        <div>
+            <button class="btn" id="sdk-restart-btn" onclick="restartCurrentGame()"><i class="fa-solid fa-rotate-right"></i> เล่นอีกครั้ง</button>
+            <button class="btn btn-yellow" onclick="goHome()"><i class="fa-solid fa-house"></i> ปิดเกม (กลับหน้าหลัก)</button>
+        </div>
+    </div>
+
+    <!-- Modal Feedback -->
+    <div class="modal" id="feedback-modal">
+        <div class="modal-content">
+            <div class="feedback-icon" id="feedback-icon">🎉</div>
+            <h2 id="feedback-title" style="font-family: 'Mali', cursive;">ถูกต้อง!</h2>
+            <p id="feedback-detail" style="margin: 15px 0; color: #455A64; line-height: 1.5;"></p>
+            <button class="btn" id="next-btn" onclick="nextQuestion()">ข้อถัดไป <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* ==========================================================================
+   EASY MODE QUESTION DATABASE (10 ข้อไม่ซ้ำ เน้นโจทย์ขั้นตอนเดียวคำนวณง่าย)
+   ========================================================================== */
+const EASY_QUESTION_BANK = [
+    {
+        from: "บ้าน", to: "โรงเรียน", iconFrom: "🏠", iconTo: "🏫",
+        mapDist: 4, scale: 100, targetUnit: "เซนติเมตร", answer: 400,
+        text: "ถ้าระยะทางจากบ้านไปโรงเรียนบนแผนที่ยาว 4 เซนติเมตร และแผนที่มีมาตราส่วน 1 : 100 ระยะทางจริงจะยาวกี่เซนติเมตร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (4 × 100)",
+        solution: "วิธีคิด: ระยะทางจริง = 4 × 100 = 400 เซนติเมตร"
+    },
+    {
+        from: "โรงเรียน", to: "สวนสาธารณะ", iconFrom: "🏫", iconTo: "🌳",
+        mapDist: 5, scale: 100, targetUnit: "เซนติเมตร", answer: 500,
+        text: "ถ้าระยะทางบนแผนที่จากโรงเรียนไปสวนสาธารณะยาว 5 เซนติเมตร มาตราส่วน 1 : 100 ระยะทางจริงยาวกี่เซนติเมตร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (5 × 100)",
+        solution: "วิธีคิด: ระยะทางจริง = 5 × 100 = 500 เซนติเมตร"
+    },
+    {
+        from: "โรงเรียน", to: "สนามกีฬา", iconFrom: "🏫", iconTo: "⚽",
+        mapDist: 6, scale: 200, targetUnit: "เซนติเมตร", answer: 1200,
+        text: "แผนที่มาตราส่วน 1 : 200 ถ้าระยะทางบนแผนที่จากโรงเรียนไปสนามกีฬาคือ 6 เซนติเมตร ระยะทางจริงยาวกี่เซนติเมตร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (6 × 200)",
+        solution: "วิธีคิด: ระยะทางจริง = 6 × 200 = 1,200 เซนติเมตร"
+    },
+    {
+        from: "หมู่บ้าน", to: "ปราสาท", iconFrom: "🏡", iconTo: "🏰",
+        mapDist: 3, scale: 500, targetUnit: "เซนติเมตร", answer: 1500,
+        text: "แผนที่ผจญภัยมีมาตราส่วน 1 : 500 ถ้าระยะทางบนแผนที่จากหมู่บ้านไปปราสาทคือ 3 เซนติเมตร ระยะทางจริงเท่ากับกี่เซนติเมตร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (3 × 500)",
+        solution: "วิธีคิด: ระยะทางจริง = 3 × 500 = 1,500 เซนติเมตร"
+    },
+    {
+        from: "ห้องเรียน", to: "ห้องสมุด", iconFrom: "🏫", iconTo: "📚",
+        realDist: 800, scale: 400, targetUnit: "เซนติเมตร", answer: 2,
+        text: "ระยะทางจริงจากห้องเรียนไปห้องสมุดคือ 800 เซนติเมตร หากใช้มาตราส่วน 1 : 400 ระยะทางบนแผนที่จะยาวกี่เซนติเมตร?",
+        hint: "นำระยะทางจริง หารด้วย เลขมาตราส่วน (800 ÷ 400)",
+        solution: "วิธีคิด: ระยะบนแผนที่ = 800 ÷ 400 = 2 เซนติเมตร"
+    },
+    {
+        from: "ร้านค้า", to: "โรงพยาบาล", iconFrom: "🏪", iconTo: "🏥",
+        mapDist: 8, scale: 100, targetUnit: "เซนติเมตร", answer: 800,
+        text: "แผนที่มีมาตราส่วน 1 : 100 ถ้าระยะทางบนแผนที่จากร้านค้าไปโรงพยาบาลคือ 8 เซนติเมตร ระยะทางจริงยาวกี่เซนติเมตร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (8 × 100)",
+        solution: "วิธีคิด: ระยะทางจริง = 8 × 100 = 800 เซนติเมตร"
+    },
+    {
+        from: "สถานีตำรวจ", to: "ตลาด", iconFrom: "🚓", iconTo: "🧺",
+        realDist: 1000, scale: 200, targetUnit: "เซนติเมตร", answer: 5,
+        text: "ระยะทางจริงคือ 1,000 เซนติเมตร เขียนลงบนแผนที่ด้วยมาตราส่วน 1 : 200 จะได้ระยะทางบนแผนที่กี่เซนติเมตร?",
+        hint: "นำระยะทางจริง หารด้วย เลขมาตราส่วน (1000 ÷ 200)",
+        solution: "วิธีคิด: ระยะบนแผนที่ = 1,000 ÷ 200 = 5 เซนติเมตร"
+    },
+    {
+        from: "จุดแคมป์", to: "น้ำตก", iconFrom: "⛺", iconTo: "🌊",
+        mapDist: 7, scale: 300, targetUnit: "เซนติเมตร", answer: 2100,
+        text: "แผนที่เดินป่ามีมาตราส่วน 1 : 300 ระยะทางบนแผนที่จากจุดแคมป์ไปน้ำตกยาว 7 เซนติเมตร ระยะทางจริงยาวกี่เซนติเมตร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (7 × 300)",
+        solution: "วิธีคิด: ระยะทางจริง = 7 × 300 = 2,100 เซนติเมตร"
+    },
+    {
+        from: "ท่าเรือ", to: "ประภาคาร", iconFrom: "⚓", iconTo: "🚨",
+        realDist: 1200, scale: 300, targetUnit: "เซนติเมตร", answer: 4,
+        text: "ระยะทางจริงจากท่าเรือไปประภาคารคือ 1,200 เซนติเมตร เขียนด้วยมาตราส่วน 1 : 300 จะยาวกี่เซนติเมตรบนแผนที่?",
+        hint: "นำระยะทางจริง หารด้วย เลขมาตราส่วน (1200 ÷ 300)",
+        solution: "วิธีคิด: ระยะบนแผนที่ = 1,200 ÷ 300 = 4 เซนติเมตร"
+    },
+    {
+        from: "จุดเริ่มต้น", to: "สมบัติ", iconFrom: "🚩", iconTo: "💎",
+        mapDist: 10, scale: 50, targetUnit: "เซนติเมตร", answer: 500,
+        text: "ลายขุมทรัพย์ใช้มาตราส่วน 1 : 50 ถ้าระยะทางบนแผนที่ยาว 10 เซนติเมตร ระยะทางจริงคือเท่าไร?",
+        hint: "นำระยะทางบนแผนที่ คูณด้วย เลขมาตราส่วน (10 × 50)",
+        solution: "วิธีคิด: ระยะทางจริง = 10 × 50 = 500 เซนติเมตร"
+    }
+];
+
+/* ==========================================================================
+   GAME STATE & AUDIO
+   ========================================================================== */
+let gameState = {
+    playerName: "นักสำรวจ",
+    questions: [],
+    currentIndex: 0,
+    score: 0,
+    correctCount: 0,
+    startTime: 0,
+    usedHint: false
+};
+
+const playSound = (type) => {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'correct') {
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, ctx.currentTime);
+            osc.frequency.setValueAtTime(130, ctx.currentTime + 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.4);
+        } else if (type === 'click') {
+            osc.frequency.setValueAtTime(400, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        }
+    } catch(e) {}
+};
+
+function switchScreen(screenId) {
+    playSound('click');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+}
+
+function showRules() {
+    alert("📌 กติกาการเล่น Level 1 (EASY):\n\n1. อ่านโจทย์และสังเกตข้อมูลบนแผนที่ประกอบ\n2. คำนวณหาคำตอบเรื่องมาตราส่วน\n3. เติมคำตอบเป็นตัวเลขลงในช่องว่าง แล้วกด 'ตรวจคำตอบ'\n4. ตอบถูกต้องได้ +1 คะแนน\n5. สามารถกด 'ขอคำใบ้' ได้ (หัก 2 คะแนน)\n6. พิชิตภารกิจให้ครบทั้ง 10 ข้อ!");
+}
+
+function startGame() {
+    __sdkStartTime = Date.now();
+    const inputName = document.getElementById('player-name').value.trim();
+    gameState.playerName = inputName || "นักสำรวจน้อย";
+    gameState.score = 0;
+    gameState.correctCount = 0;
+    gameState.currentIndex = 0;
+    gameState.startTime = Date.now();
+
+    // Randomize 10 non-repeating questions
+    gameState.questions = [...EASY_QUESTION_BANK].sort(() => Math.random() - 0.5);
+
+    // Update HUD Initial State
+    document.getElementById('hud-name').innerText = gameState.playerName;
+    document.getElementById('hud-score').innerText = gameState.score;
+
+    switchScreen('screen-game');
+    loadQuestion();
+}
+
+/* ==========================================================================
+   RENDER QUESTION & SVG MAP GRAPHICS
+   ========================================================================== */
+function loadQuestion() {
+    const q = gameState.questions[gameState.currentIndex];
+    gameState.usedHint = false;
+
+    // HUD Updates
+    document.getElementById('hud-progress').innerText = gameState.currentIndex + 1;
+    document.getElementById('hud-score').innerText = gameState.score;
+    document.getElementById('progress-bar').style.width = `${((gameState.currentIndex) / 10) * 100}%`;
+
+    // Question & Inputs
+    document.getElementById('question-text').innerText = q.text;
+    document.getElementById('unit-label').innerText = q.targetUnit;
+    document.getElementById('answer-input').value = "";
+    document.getElementById('answer-input').focus();
+
+    // Reset Hint
+    document.getElementById('hint-box').style.display = "none";
+    document.getElementById('hint-text').innerText = q.hint;
+
+    // Render Dynamic SVG Map
+    renderMapGraphic(q);
+}
+
+function renderMapGraphic(q) {
+    const viewport = document.getElementById('map-viewport');
+    
+    let subInfoText = `มาตราส่วน 1 : ${q.scale.toLocaleString()}`;
+    if (q.realDist) {
+        subInfoText += ` | ระยะทางจริง: ${q.realDist.toLocaleString()} ซม.`;
+    }
+
+    viewport.innerHTML = `
+        <svg width="100%" height="100%" viewBox="0 0 600 200" style="background: linear-gradient(180deg, #F1F8E9 0%, #C8E6C9 100%);">
+            <!-- Map Decorative Background -->
+            <path d="M 0,100 Q 150,40 300,100 T 600,100" fill="none" stroke="#A5D6A7" stroke-width="24" opacity="0.4"/>
+            <circle cx="90" cy="40" r="16" fill="#FFF" opacity="0.6"/>
+            <circle cx="510" cy="160" r="22" fill="#FFF" opacity="0.6"/>
+
+            <!-- Route Line -->
+            <line x1="120" y1="100" x2="480" y2="100" stroke="#2E7D32" stroke-width="4" stroke-dasharray="8,8" />
+
+            <!-- Origin Point (A) -->
+            <g transform="translate(120, 100)">
+                <circle r="36" fill="#FFF" stroke="#4CAF50" stroke-width="3"/>
+                <text x="0" y="10" font-size="32" text-anchor="middle">${q.iconFrom}</text>
+                <text x="0" y="54" font-size="14" font-weight="bold" fill="#1B5E20" text-anchor="middle">${q.from}</text>
+            </g>
+
+            <!-- Destination Point (B) -->
+            <g transform="translate(480, 100)">
+                <circle r="36" fill="#FFF" stroke="#FF7043" stroke-width="3"/>
+                <text x="0" y="10" font-size="32" text-anchor="middle">${q.iconTo}</text>
+                <text x="0" y="54" font-size="14" font-weight="bold" fill="#BF360C" text-anchor="middle">${q.to}</text>
+            </g>
+
+            <!-- Map Distance Badge -->
+            <g transform="translate(300, 85)">
+                <rect x="-85" y="-18" width="170" height="34" rx="17" fill="#FFF" stroke="#2E7D32" stroke-width="2"/>
+                <text x="0" y="5" font-size="14" font-weight="bold" fill="#2E7D32" text-anchor="middle">
+                    ${q.mapDist ? `ระยะบนแผนที่: ${q.mapDist} ซม.` : 'ระยะบนแผนที่: ? ซม.'}
+                </text>
+            </g>
+
+            <!-- Scale & Real Info Bar -->
+            <g transform="translate(300, 180)">
+                <rect x="-140" y="-14" width="280" height="26" rx="8" fill="rgba(27, 94, 32, 0.75)"/>
+                <text x="0" y="4" font-size="13" fill="#FFF" text-anchor="middle">${subInfoText}</text>
+            </g>
+        </svg>
+    `;
+}
+
+/* ==========================================================================
+   ANSWER CHECKING & HINT LOGIC
+   ========================================================================== */
+function useHint() {
+    if (!gameState.usedHint) {
+        gameState.usedHint = true;
+        gameState.score = Math.max(0, gameState.score - 2);
+        document.getElementById('hud-score').innerText = gameState.score;
+        document.getElementById('hint-box').style.display = "block";
+        playSound('click');
+    }
+}
+
+function checkAnswer() {
+    const q = gameState.questions[gameState.currentIndex];
+    const rawInput = document.getElementById('answer-input').value.trim().replace(/,/g, '');
+    
+    if (rawInput === "") {
+        alert("กรุณากรอกคำตอบก่อนส่งนะครับ!");
+        return;
+    }
+
+    const userAns = parseFloat(rawInput);
+    const expectedAns = q.answer;
+    const isCorrect = Math.abs(userAns - expectedAns) < 0.01;
+
+    const modal = document.getElementById('feedback-modal');
+    const icon = document.getElementById('feedback-icon');
+    const title = document.getElementById('feedback-title');
+    const detail = document.getElementById('feedback-detail');
+
+    if (isCorrect) {
+        playSound('correct');
+        gameState.score += 1;
+        gameState.correctCount++;
+        icon.innerText = "🎉";
+        title.innerText = "ยอดเยี่ยม! ตอบถูกต้อง";
+        title.style.color = "#2E7D32";
+        detail.innerHTML = `คุณได้รับ <b>+1 คะแนน</b><br><br>${q.solution}`;
+    } else {
+        playSound('wrong');
+        icon.innerText = "😅";
+        title.innerText = "ยังไม่ถูกต้อง!";
+        title.style.color = "#C62828";
+        detail.innerHTML = `คำตอบที่ถูกต้องคือ: <b>${expectedAns.toLocaleString()} ${q.targetUnit}</b><br><br>${q.solution}`;
+    }
+
+    document.getElementById('hud-score').innerText = gameState.score;
+    modal.style.display = "flex";
+}
+
+function nextQuestion() {
+    document.getElementById('feedback-modal').style.display = "none";
+    gameState.currentIndex++;
+
+    if (gameState.currentIndex < 10) {
+        loadQuestion();
+    } else {
+        showSummary();
+    }
+}
+
+/* ==========================================================================
+   SUMMARY & CELEBRATION
+   ========================================================================== */
+function showSummary() {
+    sdkSubmitScore(gameState.score, 10);
+    document.getElementById('progress-bar').style.width = `100%`;
+    
+    const timeSpentSeconds = Math.floor((Date.now() - gameState.startTime) / 1000);
+    const percentage = Math.round((gameState.correctCount / 10) * 100);
+
+    document.getElementById('summary-player').innerText = `ผู้เล่น: ${gameState.playerName}`;
+    document.getElementById('summary-score').innerText = gameState.score;
+    document.getElementById('summary-correct').innerText = `${gameState.correctCount}/10`;
+    document.getElementById('summary-percent').innerText = `${percentage}%`;
+    document.getElementById('summary-time').innerText = `${timeSpentSeconds} วินาที`;
+
+    let rankTitle = "";
+    let trophy = "🏆";
+
+    if (percentage >= 90) {
+        rankTitle = "นักสำรวจมาตราส่วนระดับปรมาจารย์";
+        trophy = "🥇";
+        fireConfetti();
+    } else if (percentage >= 70) {
+        rankTitle = "นักสำรวจมาตราส่วนระดับมืออาชีพ";
+        trophy = "🥈";
+    } else if (percentage >= 50) {
+        rankTitle = "นักสำรวจมาตราส่วนระดับฝึกหัด";
+        trophy = "🥉";
+    } else {
+        rankTitle = "นักสำรวจมือใหม่ ควรฝึกฝนเพิ่มเติม";
+        trophy = "📜";
+    }
+
+    document.getElementById('summary-title').innerText = rankTitle;
+    document.getElementById('summary-trophy').innerText = trophy;
+
+    switchScreen('screen-summary');
+}
+
+function fireConfetti() {
+    if (typeof confetti === 'function') {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    }
+}
+
+/* ===================== MathGame SDK Integration ===================== */
+const GAME_ID = 'game5';
+let __sdkStartTime = null;
+
+function getElapsedSeconds() {
+    return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+}
+
+async function refreshStartButton() {
+    const btn = document.getElementById('sdk-start-btn');
+    const banner = document.getElementById('sdk-start-banner');
+    if (!window.MathGameSDK || !btn || !banner) return;
+    try {
+        const status = await MathGameSDK.getGameStatus(GAME_ID);
+        if (!status.played) {
+            btn.disabled = false;
+            banner.style.display = 'none';
+        } else if (status.hearts === null || status.hearts > 0) {
+            btn.disabled = false;
+            banner.style.display = 'block';
+            banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+        } else {
+            btn.disabled = true;
+            banner.style.display = 'block';
+            banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+        }
+    } catch (e) {}
+}
+
+async function sdkSubmitScore(finalScore, totalQuestions) {
+    const statusEl = document.getElementById('sdk-save-status');
+    const elapsed = getElapsedSeconds();
+    if (window.MathGameSDK) {
+        try {
+            const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+            if (statusEl) {
+                if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+            }
+        } catch (e) {
+            if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+        }
+    }
+    await refreshStartButton();
+}
+
+function restartCurrentGame() {
+    startGame();
+}
+
+function goHome() {
+    window.location.href = document.referrer || '../index.html';
+}
+
+window.addEventListener('load', async function () {
+    const playerBox = document.getElementById('sdk-player-box');
+    if (window.MathGameSDK && playerBox) {
+        const player = MathGameSDK.getPlayer();
+        if (player && player.name) {
+            playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+        } else {
+            playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+        }
+    }
+    await refreshStartButton();
+});
+</script>
+
+</body>
+</html>

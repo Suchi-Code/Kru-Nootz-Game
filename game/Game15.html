@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมคณิตศาสตร์: พิชิตมุมภายในรูปสามเหลี่ยม (180° Challenge)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Animate.css สำหรับเอฟเฟกต์แอนิเมชัน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts - Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fef3c7 100%);
+        }
+        .btn-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Container หลัก -->
+    <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-white w-full max-w-2xl overflow-hidden p-6 relative">
+
+        <!-- 1. หน้าเมนูหลัก (Main Menu) -->
+        <div id="screen-menu" class="text-center py-8 animate__animated animate__fadeIn">
+            <div class="inline-block p-4 bg-amber-100 rounded-full mb-4 shadow-inner">
+                <i data-lucide="calculator" class="w-16 h-16 text-amber-500"></i>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-800 mb-2">พิชิตมุมภายในสามเหลี่ยม</h1>
+            <p class="text-slate-600 mb-6 text-base sm:text-lg">ไขปริศนามุมที่หายไป โดยใช้กฎ <span class="text-indigo-600 font-bold">มุมภายในรวมกันได้ 180°</span></p>
+
+            <div id="sdk-player-box" class="text-sm text-indigo-600 mb-2"></div>
+            <div id="sdk-start-banner" class="hidden bg-amber-50 border-2 border-amber-300 rounded-xl p-3 mb-3 text-sm text-amber-800 max-w-md mx-auto"></div>
+
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 max-w-md mx-auto mb-8 text-left text-sm text-slate-700 space-y-2">
+                <p class="font-bold text-indigo-900 flex items-center gap-2">
+                    <i data-lucide="lightbulb" class="w-4 h-4 text-amber-500"></i> กติกาการเล่น:
+                </p>
+                <p>1. โจทย์จะแสดงรูปสามเหลี่ยมพร้อมขนาดของมุม 2 มุม</p>
+                <p>2. คำนวณหามุมที่ซ่อนอยู่ตรงเครื่องหมาย <span class="text-rose-500 font-bold">"?"</span></p>
+                <p>3. ทำแบบทดสอบทั้งหมด 10 ข้อ แล้วมาดูคะแนนกัน!</p>
+            </div>
+
+            <button id="sdk-start-btn" onclick="startGame()" class="btn-hover bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold py-4 px-10 rounded-2xl shadow-lg shadow-indigo-200 inline-flex items-center gap-3">
+                <i data-lucide="play-circle" class="w-7 h-7"></i> เริ่มเล่นเกมเลย!
+            </button>
+        </div>
+
+        <!-- 2. หน้าเล่นเกม (Game Screen) -->
+        <div id="screen-game" class="hidden animate__animated animate__fadeIn">
+            <!-- Header: แถบความคืบหน้า และ คะแนน -->
+            <div class="flex items-center justify-between mb-4">
+                <div></div>
+                <div class="text-sm font-semibold text-slate-500">
+                    ข้อที่ <span id="current-question-num" class="text-indigo-600 text-lg font-bold">1</span> / 10
+                </div>
+                <div class="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <i data-lucide="star" class="w-4 h-4 fill-amber-500 text-amber-500"></i> คะแนน: <span id="current-score">0</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden mb-6">
+                <div id="progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+            </div>
+
+            <!-- คำถาม & พื้นที่ SVG แสดงรูปสามเหลี่ยม -->
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-6 text-center">
+                <h2 id="question-text" class="text-base sm:text-lg font-bold text-slate-700 mb-3">
+                    มุมที่เหลือ (<span class="text-rose-500 font-black">?</span>) มีขนาดกี่องศา?
+                </h2>
+                
+                <!-- พื้นที่วาด SVG รูปสามเหลี่ยม -->
+                <div class="w-full h-60 flex items-center justify-center bg-white rounded-xl shadow-inner border border-slate-200 relative overflow-hidden" id="svg-container">
+                    <svg id="triangle-svg" viewBox="0 0 320 220" class="w-full h-full max-w-[300px]"></svg>
+                </div>
+            </div>
+
+            <!-- ตัวเลือกคำตอบ 4 ปุ่ม -->
+            <div id="options-container" class="grid grid-cols-2 gap-3 mb-4">
+                <!-- ปุ่มสร้างผ่าน JavaScript -->
+            </div>
+
+            <!-- ส่วนแสดง Feedback และคำอธิบาย -->
+            <div id="feedback-box" class="hidden p-4 rounded-xl text-center mb-4 animate__animated animate__fadeInUp">
+                <p id="feedback-text" class="font-semibold text-sm sm:text-base"></p>
+                <button id="next-btn" onclick="nextQuestion()" class="mt-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2 px-6 rounded-xl btn-hover text-sm inline-flex items-center gap-2">
+                    ข้อถัดไป <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. หน้าสรุปคะแนน (Summary Screen) -->
+        <div id="screen-summary" class="hidden text-center py-8 animate__animated animate__zoomIn">
+            <div class="inline-block p-4 bg-emerald-100 rounded-full mb-4 shadow-inner">
+                <i data-lucide="trophy" class="w-16 h-16 text-emerald-500"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">ทำแบบทดสอบเรียบร้อย!</h1>
+            <p class="text-slate-600 mb-6">สรุปผลการเรียนรู้เรื่องมุมภายในรูปสามเหลี่ยม</p>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 max-w-sm mx-auto mb-8 shadow-sm">
+                <div class="text-5xl font-black text-indigo-600 mb-2" id="final-score">0 / 10</div>
+                <p id="final-eval" class="text-slate-700 font-bold text-lg">ยอดเยี่ยมมาก!</p>
+                <div id="sdk-save-status" class="text-sm text-slate-500 mt-2"></div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                <button onclick="restartCurrentGame()" class="btn-hover bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-200 flex-1 flex items-center justify-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i> เล่นอีกครั้ง
+                </button>
+                <button onclick="goHome()" class="btn-hover bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl flex-1 flex items-center justify-center gap-2">
+                    <i data-lucide="home" class="w-5 h-5"></i> ปิดเกม (กลับหน้าหลัก)
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript LOGIC -->
+    <script>
+        // --- ตัวแปรสภาวะของเกม (Game State) ---
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        // --- ฟังก์ชันช่วยเหลือด้านคณิตศาสตร์และการสุ่ม ---
+
+        // สุ่มตัวเลขอินทิเจอร์ในช่วง [min, max]
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // สุ่มเรียงลำดับอาร์เรย์ (Shuffle Array)
+        function shuffleArray(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        // --- ระบบสุ่มสร้างโจทย์แบบ Dynamic (Question Generator) ---
+        function generateQuestions() {
+            const qList = [];
+
+            for (let i = 0; i < 10; i++) {
+                // 1. สุ่มสร้างมุม A, B, C โดยผลรวมต้องเท่ากับ 180 องศาพอดี (ทุกมุม > 20 เพื่อให้ทรงรูปสวยงาม)
+                let angleA = getRandomInt(25, 110);
+                let angleB = getRandomInt(25, 180 - angleA - 25);
+                let angleC = 180 - angleA - angleB;
+
+                const angles = [angleA, angleB, angleC];
+
+                // 2. สุ่มเลือกมุมเป้าหมายที่ต้องการให้ผู้เล่นคำนวณหา (0 = A, 1 = B, 2 = C)
+                const targetIndex = getRandomInt(0, 2);
+                const correctAnswer = angles[targetIndex];
+
+                // หาดัชนีของอีก 2 มุมที่ต้องแสดงค่าองศา
+                const visibleIndices = [0, 1, 2].filter(idx => idx !== targetIndex);
+                const val1 = angles[visibleIndices[0]];
+                const val2 = angles[visibleIndices[1]];
+
+                // 3. สร้างตัวเลือกหลอก 3 ตัวเลือกที่ไม่ซ้ำกัน และใกล้เคียงคำตอบจริง (บวกลบไม่เกิน 10-20 องศา)
+                const distractors = new Set();
+                while (distractors.size < 3) {
+                    let offset = getRandomInt(5, 20) * (Math.random() < 0.5 ? 1 : -1);
+                    let wrongAns = correctAnswer + offset;
+
+                    // เงื่อนไข: ตัวเลือกหลอกต้อง > 0, < 180 และไม่ซ้ำกับคำตอบจริง
+                    if (wrongAns > 0 && wrongAns < 180 && wrongAns !== correctAnswer) {
+                        distractors.add(wrongAns);
+                    }
+                }
+
+                // รวมคำตอบจริงและตัวเลือกหลอกเข้าด้วยกันแล้วสุ่มตำแหน่ง
+                const options = shuffleArray([correctAnswer, ...Array.from(distractors)]);
+
+                qList.push({
+                    angles: angles,             // [มุม0, มุม1, มุม2]
+                    targetIndex: targetIndex,   // มุมที่เป็นเครื่องหมาย ?
+                    visibleIndices: visibleIndices,
+                    correctAnswer: correctAnswer,
+                    val1: val1,
+                    val2: val2,
+                    options: options,
+                    explanation: `180° - (${val1}° + ${val2}°) = ${correctAnswer}°`
+                });
+            }
+            return qList;
+        }
+
+        // --- ฟังก์ชันวาด SVG รูปสามเหลี่ยมพร้อมข้อความกำกับมุม ---
+        function drawTriangleSVG(angles, targetIndex) {
+            const svg = document.getElementById('triangle-svg');
+            svg.innerHTML = ''; // ล้างรูปทรงเดิม
+
+            // แปลงองศาเป็นเรเดียน
+            const radA = angles[0] * Math.PI / 180;
+            const radB = angles[1] * Math.PI / 180;
+            const radC = angles[2] * Math.PI / 180;
+
+            // คำนวณความยาวด้านสมมติด้วยกฎของไซน์ (Law of Sines) โดยให้ด้าน c = 100
+            const c = 100;
+            const a = (c * Math.sin(radA)) / Math.sin(radC);
+            const b = (c * Math.sin(radB)) / Math.sin(radC);
+
+            // คำนวณพิกัดจุดยอดดิบ (Unscaled Points)
+            // P0 (มุม A): อยู่ทางซ้ายล่าง
+            // P1 (มุม B): อยู่ทางขวาล่าง
+            // P2 (มุม C): อยู่จุดยอดบน
+            const p0 = { x: 0, y: 0 };
+            const p1 = { x: c, y: 0 };
+            const p2 = { x: b * Math.cos(radA), y: -b * Math.sin(radA) };
+
+            // คำนวณ Bounding Box เพื่อ Scale รูปให้อยู่กึ่งกลาง SVG (ขนาด 320x220)
+            const minX = Math.min(p0.x, p1.x, p2.x);
+            const maxX = Math.max(p0.x, p1.x, p2.x);
+            const minY = Math.min(p0.y, p1.y, p2.y);
+            const maxY = Math.max(p0.y, p1.y, p2.y);
+
+            const triWidth = maxX - minX;
+            const triHeight = maxY - minY;
+
+            // กำหนดอัตราส่วนการขยายรูป (Scale Factor)
+            const scale = Math.min(220 / triWidth, 130 / triHeight);
+            const offsetX = (320 - triWidth * scale) / 2 - minX * scale;
+            const offsetY = (220 - triHeight * scale) / 2 - minY * scale + 15;
+
+            // พิกัดจุดยอดที่ทำการปรับขนาดและจัดกึ่งกลางเรียบร้อยแล้ว
+            const P = [
+                { x: p0.x * scale + offsetX, y: p0.y * scale + offsetY }, // จุด P0 (มุม A)
+                { x: p1.x * scale + offsetX, y: p1.y * scale + offsetY }, // จุด P1 (มุม B)
+                { x: p2.x * scale + offsetX, y: p2.y * scale + offsetY }  // จุด P2 (มุม C)
+            ];
+
+            // 1. วาดรูปทรงสามเหลี่ยม (Polygon)
+            const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            polygon.setAttribute("points", `${P[0].x},${P[0].y} ${P[1].x},${P[1].y} ${P[2].x},${P[2].y}`);
+            polygon.setAttribute("class", "fill-indigo-50 stroke-indigo-600 stroke-[3] stroke-linejoin-round");
+            svg.appendChild(polygon);
+
+            // 2. แสดงข้อความตัวเลขกำกับองศาหรือเครื่องหมาย ? ที่จุดยอดทั้ง 3
+            for (let i = 0; i < 3; i++) {
+                const isTarget = (i === targetIndex);
+                const textVal = isTarget ? "?" : `${angles[i]}°`;
+                
+                // คำนวณทิศทางการเลื่อนตำแหน่งข้อความออกจากจุดยอดเล็กน้อย
+                let textX = P[i].x;
+                let textY = P[i].y;
+
+                if (i === 0) { textX -= 18; textY += 12; }      // มุม A (ซ้ายล่าง)
+                else if (i === 1) { textX += 18; textY += 12; } // มุม B (ขวาล่าง)
+                else { textY -= 12; }                          // มุม C (จุดยอดบน)
+
+                // ปรับแต่งสไตล์ของข้อความ
+                const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textEl.setAttribute("x", textX);
+                textEl.setAttribute("y", textY);
+                textEl.setAttribute("text-anchor", "middle");
+                textEl.setAttribute("dominant-baseline", "middle");
+
+                if (isTarget) {
+                    textEl.setAttribute("class", "fill-rose-600 font-black text-xl animate__animated animate__pulse animate__infinite");
+                } else {
+                    textEl.setAttribute("class", "fill-slate-700 font-bold text-sm");
+                }
+
+                textEl.textContent = textVal;
+                svg.appendChild(textEl);
+
+                // วาดเส้นโค้งสัญลักษณ์มุม (Angle Arc Indicator)
+                drawAngleArc(svg, P, i, isTarget);
+            }
+        }
+
+        // ฟังก์ชันช่วยวาดเส้นโค้งบอกมุม (Arc)
+        function drawAngleArc(svg, P, index, isTarget) {
+            const pCenter = P[index];
+            const pPrev = P[(index + 2) % 3];
+            const pNext = P[(index + 1) % 3];
+
+            // คำนวณเวกเตอร์พิกัด
+            const angle1 = Math.atan2(pPrev.y - pCenter.y, pPrev.x - pCenter.x);
+            const angle2 = Math.atan2(pNext.y - pCenter.y, pNext.x - pCenter.x);
+
+            const r = 22; // รัศมีเส้นโค้ง
+            const x1 = pCenter.x + r * Math.cos(angle1);
+            const y1 = pCenter.y + r * Math.sin(angle1);
+            const x2 = pCenter.x + r * Math.cos(angle2);
+            const y2 = pCenter.y + r * Math.sin(angle2);
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const d = `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`;
+            path.setAttribute("d", d);
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke", isTarget ? "#f43f5e" : "#6366f1");
+            path.setAttribute("stroke-width", isTarget ? "3" : "2");
+            if (isTarget) path.setAttribute("stroke-dasharray", "3,3");
+
+            svg.appendChild(path);
+        }
+
+        // --- ระบบควบคุมการดำเนินเกม (Game Control Mechanics) ---
+
+        function startGame() {
+            __sdkStartTime = Date.now();
+            questions = generateQuestions();
+            currentQuestionIndex = 0;
+            score = 0;
+
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-summary').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            const q = questions[currentQuestionIndex];
+
+            // อัปเดตข้อมูลบน UI
+            document.getElementById('current-question-num').textContent = currentQuestionIndex + 1;
+            document.getElementById('current-score').textContent = score;
+            document.getElementById('progress-bar').style.width = `${(currentQuestionIndex / 10) * 100}%`;
+            document.getElementById('feedback-box').classList.add('hidden');
+
+            // วาดสามเหลี่ยม SVG
+            drawTriangleSVG(q.angles, q.targetIndex);
+
+            // สร้างปุ่มตัวเลือกคำตอบ 4 ตัวเลือก
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full btn-hover bg-white hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl border-2 border-slate-200 text-center text-lg sm:text-xl shadow-sm transition-all";
+                btn.innerHTML = `<span>${opt}°</span>`;
+                btn.onclick = () => checkAnswer(opt, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            lucide.createIcons();
+        }
+
+        function checkAnswer(selectedOption, selectedBtn) {
+            if (isAnswered) return; // ป้องกันการคลิกซ้ำ
+            isAnswered = true;
+
+            const q = questions[currentQuestionIndex];
+            const allButtons = document.getElementById('options-container').children;
+            const feedbackBox = document.getElementById('feedback-box');
+            const feedbackText = document.getElementById('feedback-text');
+
+            if (selectedOption === q.correctAnswer) {
+                // ตอบถูกต้อง
+                score++;
+                document.getElementById('current-score').textContent = score;
+                selectedBtn.className = "w-full bg-emerald-500 text-white font-black py-3 px-4 rounded-xl border-2 border-emerald-600 text-center text-xl shadow-lg animate__animated animate__rubberBand";
+
+                feedbackBox.className = "p-4 rounded-xl text-center mb-4 bg-emerald-100 border border-emerald-300 text-emerald-900 animate__animated animate__fadeInUp";
+                feedbackText.innerHTML = `🎉 <strong>ถูกต้องแล้วครับ!</strong><br><span class="text-sm">อธิบาย: ${q.explanation}</span>`;
+            } else {
+                // ตอบผิด
+                selectedBtn.className = "w-full bg-rose-500 text-white font-black py-3 px-4 rounded-xl border-2 border-rose-600 text-center text-xl shadow-lg animate__animated animate__shakeX";
+
+                // ไฮไลต์เฉลยคำตอบที่ถูกต้อง
+                Array.from(allButtons).forEach(btn => {
+                    if (parseInt(btn.textContent) === q.correctAnswer) {
+                        btn.className = "w-full bg-emerald-100 text-emerald-800 font-black py-3 px-4 rounded-xl border-2 border-emerald-500 text-center text-xl";
+                    }
+                });
+
+                feedbackBox.className = "p-4 rounded-xl text-center mb-4 bg-rose-100 border border-rose-300 text-rose-900 animate__animated animate__fadeInUp";
+                feedbackText.innerHTML = `😅 <strong>ยังไม่ถูกต้อง!</strong> คำตอบคือ <strong>${q.correctAnswer}°</strong><br><span class="text-sm text-rose-700">อธิบาย: ${q.explanation}</span>`;
+            }
+
+            feedbackBox.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < 10) {
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            sdkSubmitScore(score, 10);
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-summary').classList.remove('hidden');
+
+            document.getElementById('final-score').textContent = `${score} / 10`;
+            
+            // ประเมินผลคะแนน
+            const evalText = document.getElementById('final-eval');
+            if (score === 10) evalText.textContent = "🏆 ยอดเยี่ยมระดับเซียน! คำนวณได้ถูกต้องแม่นยำทุกข้อ";
+            else if (score >= 7) evalText.textContent = "🌟 เก่งมากๆ! เข้าใจกฎมุมภายในรูปสามเหลี่ยมดีมาก";
+            else if (score >= 5) evalText.textContent = "👍 ทำได้ดี! ลองฝึกคิดคำนวณบ่อยๆ จะเก่งยิ่งขึ้น";
+            else evalText.textContent = "✌️ ไม่เป็นไรนะครับ ลองกดเล่นอีกครั้งเพื่อทบทวนความเข้าใจ!";
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function showMenu() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-summary').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+        }
+
+        // เริ่มต้นโหลด Lucide Icons
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+        });
+    
+
+        /* ===================== MathGame SDK Integration ===================== */
+        const GAME_ID = 'game15';
+        let __sdkStartTime = null;
+
+        function getElapsedSeconds() {
+            return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+        }
+
+        async function refreshStartButton() {
+            const btn = document.getElementById('sdk-start-btn');
+            const banner = document.getElementById('sdk-start-banner');
+            if (!window.MathGameSDK || !btn || !banner) return;
+            try {
+                const status = await MathGameSDK.getGameStatus(GAME_ID);
+                if (!status.played) {
+                    btn.disabled = false;
+                    banner.classList.add('hidden');
+                } else if (status.hearts === null || status.hearts > 0) {
+                    btn.disabled = false;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+                } else {
+                    btn.disabled = true;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+                }
+            } catch (e) {}
+        }
+
+        async function sdkSubmitScore(finalScore, totalQuestions) {
+            const statusEl = document.getElementById('sdk-save-status');
+            const elapsed = getElapsedSeconds();
+            if (window.MathGameSDK) {
+                try {
+                    const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+                    if (statusEl) {
+                        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            }
+            await refreshStartButton();
+        }
+
+        function restartCurrentGame() {
+            startGame();
+        }
+
+        function goHome() {
+            window.location.href = document.referrer || '../index.html';
+        }
+
+        window.addEventListener('load', async function () {
+            const playerBox = document.getElementById('sdk-player-box');
+            if (window.MathGameSDK && playerBox) {
+                const player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+                }
+            }
+            await refreshStartButton();
+        });
+</script>
+</body>
+</html>

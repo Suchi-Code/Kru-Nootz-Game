@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เกมผจญภัยแบบรูปการคูณ (Math Pattern Adventure)</title>
+
+<!-- Tailwind CSS via CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts: Prompt & Kanit -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Canvas Confetti Library for Victory Effects -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  body {
+    font-family: 'Prompt', 'Kanit', sans-serif;
+    user-select: none;
+  }
+  
+  /* Keyframe Animations */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+  }
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+
+  @keyframes pulse-grow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .animate-pulse-grow {
+    animation: pulse-grow 0.3s ease-in-out;
+  }
+
+  /* Custom Themes for Levels */
+  .theme-pencil {
+    background: linear-gradient(135deg, #fff9c4 0%, #fff176 100%);
+    border-color: #fbc02d;
+  }
+  .theme-leaf {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-color: #66bb6a;
+  }
+  .theme-purple {
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+    border-color: #ab47bc;
+  }
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-3 sm:p-6">
+
+  <!-- Main Game Container -->
+  <div class="w-full max-w-xl bg-white rounded-3xl shadow-2xl border-4 border-slate-200 overflow-hidden relative">
+
+    <!-- Start Screen -->
+    <div id="screen-start" class="p-6 sm:p-10 text-center">
+      <h2 class="text-2xl font-extrabold text-slate-800 mb-3">เกมผจญภัยแบบรูปการคูณ</h2>
+      <div id="sdk-player-box" class="text-sm text-indigo-600 mb-2"></div>
+      <div id="sdk-start-banner" class="hidden bg-amber-50 border-2 border-amber-300 rounded-xl p-3 mb-3 text-sm text-amber-800"></div>
+      <button id="sdk-start-btn" onclick="startGame()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold py-3.5 px-6 rounded-2xl shadow-lg transition transform active:scale-95">
+        🚀 เริ่มเล่นเกม
+      </button>
+    </div>
+
+    <!-- Header Stats Bar -->
+    <div id="header-stats-bar" class="hidden bg-indigo-600 text-white p-4 sm:p-5 flex justify-between items-center shadow-md">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl sm:text-3xl">⏱️</span>
+        <div>
+          <div class="text-xs text-indigo-200 uppercase font-semibold">เวลาที่ใช้</div>
+          <div id="timer" class="text-xl sm:text-2xl font-bold tracking-wider">00:00</div>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <div id="combo-badge" class="hidden bg-amber-400 text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full animate-bounce shadow">
+          🔥 COMBO x<span id="combo-count">1</span>
+        </div>
+        <div class="text-xs text-indigo-200 font-semibold mt-0.5">ข้อที่</div>
+        <div class="text-xl sm:text-2xl font-bold"><span id="current-question">1</span>/10</div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div>
+          <div class="text-xs text-indigo-200 uppercase font-semibold text-right">คะแนน</div>
+          <div id="score" class="text-xl sm:text-2xl font-bold text-amber-300 text-right">0</div>
+        </div>
+        <span class="text-2xl sm:text-3xl">⭐</span>
+      </div>
+    </div>
+
+    <!-- Gameplay Area -->
+    <div id="game-screen" class="hidden p-4 sm:p-8">
+      
+      <!-- Level Indicator Badge -->
+      <div class="flex justify-between items-center mb-4">
+        <span id="level-badge" class="px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm flex items-center gap-1.5 transition-all">
+          <span id="level-icon">✏️</span> <span id="level-title">Level 1: Pencil Power</span>
+        </span>
+        <button id="btn-hint" onclick="toggleHint()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl border border-amber-300 transition flex items-center gap-1 shadow-sm">
+          💡 คำใบ้
+        </button>
+      </div>
+
+      <!-- Hint Box -->
+      <div id="hint-box" class="hidden mb-4 p-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-2xl text-amber-900 text-xs sm:text-sm animate-pulse-grow">
+        🎯 <b>เคล็ดลับ:</b> <span id="hint-text">นำผลคูณเดิมมาเติมเลข 0 ตามจำนวนหลักคูณ!</span>
+      </div>
+
+      <!-- Question Card Frame -->
+      <div id="question-card" class="theme-pencil border-4 rounded-3xl p-5 sm:p-8 text-center shadow-inner transition-all duration-300">
+        
+        <!-- Base Question (For Level 2 & 3 Pattern Visual) -->
+        <div id="base-pattern-box" class="hidden mb-4 p-3 bg-white/80 rounded-2xl border-2 border-dashed border-slate-300">
+          <div class="text-xs sm:text-sm text-slate-500 font-semibold mb-1">สังเกตแบบรูปข้อนี้:</div>
+          <div id="base-equation" class="text-lg sm:text-2xl font-bold text-slate-700 tracking-wide">
+            51 × 3 = 153
+          </div>
+        </div>
+
+        <div class="text-sm sm:text-base text-slate-600 font-bold mb-2">จงหาผลคูณต่อไปนี้</div>
+        
+        <!-- Target Question Display -->
+        <div id="target-equation" class="text-3xl sm:text-5xl font-extrabold text-slate-800 tracking-wider mb-6">
+          10 × 18 = ?
+        </div>
+
+        <!-- Answer Input Form -->
+        <form onsubmit="submitAnswer(event)" class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <input 
+            type="text" 
+            inputmode="numeric"
+            id="answer-input" 
+            placeholder="พิมพ์คำตอบ..." 
+            autocomplete="off"
+            class="w-full sm:w-2/3 text-center text-2xl sm:text-3xl font-bold py-3 px-4 rounded-2xl border-3 border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-300 shadow-md text-slate-800"
+          >
+          <button 
+            type="submit" 
+            id="btn-submit"
+            class="w-full sm:w-1/3 bg-indigo-600 hover:bg-indigo-700 text-white text-lg sm:text-xl font-bold py-3 px-6 rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-1"
+          >
+            ส่งคำตอบ 🚀
+          </button>
+        </form>
+
+        <!-- Feedback Message Display -->
+        <div id="feedback" class="min-h-[2.5rem] mt-4 flex items-center justify-center text-base sm:text-lg font-bold"></div>
+      </div>
+
+    </div>
+
+    <!-- Result Summary Screen (Hidden by Default) -->
+    <div id="result-screen" class="hidden p-6 sm:p-10 text-center">
+      <div class="text-5xl sm:text-6xl mb-2">🏆</div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-2">การผจญภัยสำนักสำเร็จ!</h2>
+      <p class="text-slate-600 text-sm sm:text-base mb-6">เก่งมาก! น้องเรียนรู้แบบรูปการคูณได้อย่างยอดเยี่ยม</p>
+
+      <!-- Star Rating Display -->
+      <div id="star-container" class="text-5xl sm:text-6xl mb-6 flex justify-center gap-2">
+        <span class="animate-bounce">⭐</span>
+        <span class="animate-bounce" style="animation-delay: 0.1s">⭐</span>
+        <span class="animate-bounce" style="animation-delay: 0.2s">⭐</span>
+      </div>
+
+      <!-- Final Stats Box -->
+      <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-6 mb-6 grid grid-cols-2 gap-4">
+        <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+          <div class="text-xs text-slate-400 font-bold uppercase">คะแนนรวม</div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-indigo-600"><span id="final-score">0</span> / 10</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+          <div class="text-xs text-slate-400 font-bold uppercase">เวลาที่ใช้</div>
+          <div id="final-time" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">00:00</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div id="sdk-save-status" class="text-sm text-slate-500 mb-3"></div>
+      <div class="flex gap-4 justify-center">
+        <button onclick="restartCurrentGame()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold py-3.5 px-6 rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+          🔄 เล่นอีกครั้ง
+        </button>
+        <button onclick="goHome()" class="w-full bg-slate-600 hover:bg-slate-700 text-white text-lg font-bold py-3.5 px-6 rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+          🏠 ปิดเกม (กลับหน้าหลัก)
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+// Web Audio API Sound Synthesizer (No External Audio Files Required)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  if (type === 'correct') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+    osc.frequency.exponentialRampToValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+    osc.frequency.exponentialRampToValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } else if (type === 'wrong') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+    osc.frequency.exponentialRampToValueAtTime(164.81, audioCtx.currentTime + 0.2); // E3
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  }
+}
+
+// Level Configuration & Question Dataset (10 Questions)
+const questionsData = [
+  // Level 1: Pencil Power (Multiply by 10) - 2 Questions
+  { level: 1, base: null, num1: 10, num2: 18, answer: 180, hint: "การคูณด้วย 10 ให้นำตัวเลขมาเติม 0 ต่อท้าย 1 ตัวได้เลย!" },
+  { level: 1, base: null, num1: 74, num2: 10, answer: 740, hint: "จำนวนใดๆ คูณด้วย 10 ให้เติมเลข 0 ต่อท้าย 1 ตัวครับ" },
+
+  // Level 2: Leaf Patterns (Multiples of 10) - 3 Questions
+  { level: 2, base: { num1: 51, num2: 3, ans: 153 }, num1: 51, num2: 30, answer: 1530, hint: "ดูผลคูณเดิม (153) แล้วเติม 0 ต่อท้ายตามจำนวนของ 30 (เติม 0 สองฝั่ง 1 ตัว)" },
+  { level: 2, base: { num1: 5, num2: 91, ans: 455 }, num1: 50, num2: 91, answer: 4550, hint: "5 × 91 = 455 ดังนั้น 50 × 91 ให้นำ 455 มาเติม 0 ต่อท้าย 1 ตัว" },
+  { level: 2, base: { num1: 42, num2: 4, ans: 168 }, num1: 42, num2: 40, answer: 1680, hint: "ใช้ผลคูณ 168 แล้วเติม 0 ของเลข 40 ต่อท้ายได้เลย!" },
+
+  // Level 3: Super Thousands (Multiples of 100 & 1,000) - 5 Questions
+  { level: 3, base: { num1: 8, num2: 3, ans: 24 }, num1: 8, num2: 300, answer: 2400, hint: "8 × 3 = 24 และ 300 มี 0 สองตัว ให้นำ 24 มาเติม 0 ต่อท้าย 2 ตัว (2,400)" },
+  { level: 3, base: { num1: 7, num2: 1, ans: 7 }, num1: 7, num2: 1000, answer: 7000, hint: "คูณด้วย 1,000 มี 0 สามตัว ให้นำผลคูณมาเติม 0 ต่อท้าย 3 ตัว" },
+  { level: 3, base: { num1: 3, num2: 9, ans: 27 }, num1: 3000, num2: 9, answer: 27000, hint: "3 × 9 = 27 เติม 0 ของ 3,000 ต่อท้ายจำนวน 3 ตัว จะได้ 27,000" },
+  { level: 3, base: { num1: 6, num2: 4, ans: 24 }, num1: 600, num2: 4, answer: 2400, hint: "6 × 4 = 24 จากนั้นเติม 0 ต่อท้าย 2 ตัว" },
+  { level: 3, base: { num1: 9, num2: 5, ans: 45 }, num1: 9, num2: 5000, answer: 45000, hint: "9 × 5 = 45 แล้วเติม 0 ของ 5,000 ต่อท้ายอีก 3 ตัว!" }
+];
+
+// State Variables
+let currentQIndex = 0;
+let score = 0;
+let combo = 0;
+let timerSeconds = 0;
+let timerInterval = null;
+let isAnswerable = true;
+
+// Level Visual Themes Configuration
+const levelThemes = {
+  1: {
+    title: "Level 1: Pencil Power (คูณด้วย 10)",
+    icon: "✏️",
+    bgClass: "theme-pencil",
+    badgeClass: "bg-amber-200 text-amber-900 border border-amber-400"
+  },
+  2: {
+    title: "Level 2: Leaf Patterns (คูณพหุคูณของ 10)",
+    icon: "🍃",
+    bgClass: "theme-leaf",
+    badgeClass: "bg-emerald-200 text-emerald-900 border border-emerald-400"
+  },
+  3: {
+    title: "Level 3: Super Thousands (คูณหลักร้อยและหลักพัน)",
+    icon: "⚡",
+    bgClass: "theme-purple",
+    badgeClass: "bg-purple-200 text-purple-900 border border-purple-400"
+  }
+};
+
+// Start Game & Timer
+function startGame() {
+  __sdkStartTime = Date.now();
+  currentQIndex = 0;
+  score = 0;
+  combo = 0;
+  timerSeconds = 0;
+  isAnswerable = true;
+  
+  document.getElementById("score").innerText = score;
+  document.getElementById("combo-badge").classList.add("hidden");
+  document.getElementById("screen-start").classList.add("hidden");
+  document.getElementById("header-stats-bar").classList.remove("hidden");
+  document.getElementById("result-screen").classList.add("hidden");
+  document.getElementById("game-screen").classList.remove("hidden");
+
+  startTimer();
+  loadQuestion();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+    const secs = String(timerSeconds % 60).padStart(2, '0');
+    document.getElementById("timer").innerText = `${mins}:${secs}`;
+  }, 1000);
+}
+
+// Load and Render Current Question
+function loadQuestion() {
+  isAnswerable = true;
+  const q = questionsData[currentQIndex];
+  const theme = levelThemes[q.level];
+
+  // Update Progress & Level Badge
+  document.getElementById("current-question").innerText = currentQIndex + 1;
+  document.getElementById("level-title").innerText = theme.title;
+  document.getElementById("level-icon").innerText = theme.icon;
+  
+  const levelBadge = document.getElementById("level-badge");
+  levelBadge.className = `px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm flex items-center gap-1.5 transition-all ${theme.badgeClass}`;
+
+  // Update Question Card Theme Style
+  const card = document.getElementById("question-card");
+  card.className = `border-4 rounded-3xl p-5 sm:p-8 text-center shadow-inner transition-all duration-300 ${theme.bgClass}`;
+
+  // Toggle Pattern Reference Display for Levels 2 & 3
+  const baseBox = document.getElementById("base-pattern-box");
+  if (q.base) {
+    document.getElementById("base-equation").innerText = `${q.base.num1.toLocaleString('th-TH')} × ${q.base.num2.toLocaleString('th-TH')} = ${q.base.ans.toLocaleString('th-TH')}`;
+    baseBox.classList.remove("hidden");
+  } else {
+    baseBox.classList.add("hidden");
+  }
+
+  // Set Target Question
+  document.getElementById("target-equation").innerText = `${q.num1.toLocaleString('th-TH')} × ${q.num2.toLocaleString('th-TH')} = ?`;
+  
+  // Reset Hint and Inputs
+  document.getElementById("hint-text").innerText = q.hint;
+  document.getElementById("hint-box").classList.add("hidden");
+  
+  const input = document.getElementById("answer-input");
+  input.value = "";
+  input.disabled = false;
+  input.focus();
+
+  document.getElementById("feedback").innerText = "";
+  document.getElementById("feedback").className = "min-h-[2.5rem] mt-4 flex items-center justify-center text-base sm:text-lg font-bold";
+}
+
+function toggleHint() {
+  const hintBox = document.getElementById("hint-box");
+  hintBox.classList.toggle("hidden");
+}
+
+// Handle Answer Submission
+function submitAnswer(e) {
+  e.preventDefault();
+  if (!isAnswerable) return;
+
+  const input = document.getElementById("answer-input");
+  // Normalize Thai numbers and commas if user inputs them
+  const rawValue = input.value.trim().replace(/,/g, '').replace(/[๐-๙]/g, d => "๐๑๒๓๔๕๖๗๘๙".indexOf(d));
+  const userAns = parseInt(rawValue, 10);
+  const q = questionsData[currentQIndex];
+
+  if (isNaN(userAns)) return;
+
+  isAnswerable = false;
+  input.disabled = true;
+  const feedback = document.getElementById("feedback");
+
+  if (userAns === q.answer) {
+    // Correct Answer Logic
+    playSound('correct');
+    combo++;
+    score += 1;
+    document.getElementById("score").innerText = score;
+
+    // Update Combo Display
+    if (combo > 1) {
+      document.getElementById("combo-count").innerText = combo;
+      document.getElementById("combo-badge").classList.remove("hidden");
+    }
+
+    feedback.innerText = "✨ ถูกต้องครับ! เก่งมาก 👍";
+    feedback.classList.add("text-emerald-600");
+
+    // Launch Confetti Effect
+    confetti({
+      particleCount: 60,
+      spread: 60,
+      origin: { y: 0.7 }
+    });
+
+    setTimeout(nextQuestion, 1200);
+  } else {
+    // Incorrect Answer Logic
+    playSound('wrong');
+    combo = 0;
+    document.getElementById("combo-badge").classList.add("hidden");
+
+    feedback.innerText = `❌ ยังไม่ถูกนะครับ เฉลยคือ ${q.answer.toLocaleString('th-TH')}`;
+    feedback.classList.add("text-rose-600");
+
+    const card = document.getElementById("question-card");
+    card.classList.add("animate-shake");
+    setTimeout(() => card.classList.remove("animate-shake"), 400);
+
+    setTimeout(nextQuestion, 2000);
+  }
+}
+
+function nextQuestion() {
+  currentQIndex++;
+  if (currentQIndex < questionsData.length) {
+    loadQuestion();
+  } else {
+    endGame();
+  }
+}
+
+// End Game & Show Summary
+function endGame() {
+  clearInterval(timerInterval);
+  sdkSubmitScore(score, questionsData.length);
+  document.getElementById("game-screen").classList.add("hidden");
+  document.getElementById("result-screen").classList.remove("hidden");
+
+  document.getElementById("final-score").innerText = score;
+  const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+  const secs = String(timerSeconds % 60).padStart(2, '0');
+  document.getElementById("final-time").innerText = `${mins}:${secs}`;
+
+  // Calculate Star Rating
+  const starContainer = document.getElementById("star-container");
+  if (score >= 9) {
+    starContainer.innerHTML = '<span>⭐</span><span>⭐</span><span>⭐</span>';
+  } else if (score >= 6) {
+    starContainer.innerHTML = '<span>⭐</span><span>⭐</span><span class="opacity-30">⭐</span>';
+  } else {
+    starContainer.innerHTML = '<span>⭐</span><span class="opacity-30">⭐</span><span class="opacity-30">⭐</span>';
+  }
+
+  // Grand Confetti Blast for High Scores
+  if (score >= 7) {
+    confetti({
+      particleCount: 120,
+      spread: 100,
+      origin: { y: 0.5 }
+    });
+  }
+}
+
+function restartGame() {
+  startGame();
+}
+
+// Initialize on Load
+
+/* ===================== MathGame SDK Integration ===================== */
+const GAME_ID = 'game14';
+let __sdkStartTime = null;
+
+function getElapsedSeconds() {
+  return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+}
+
+async function refreshStartButton() {
+  const btn = document.getElementById('sdk-start-btn');
+  const banner = document.getElementById('sdk-start-banner');
+  if (!window.MathGameSDK || !btn || !banner) return;
+  try {
+    const status = await MathGameSDK.getGameStatus(GAME_ID);
+    if (!status.played) {
+      btn.disabled = false;
+      banner.classList.add('hidden');
+    } else if (status.hearts === null || status.hearts > 0) {
+      btn.disabled = false;
+      banner.classList.remove('hidden');
+      banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+    } else {
+      btn.disabled = true;
+      banner.classList.remove('hidden');
+      banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+    }
+  } catch (e) {}
+}
+
+async function sdkSubmitScore(finalScore, totalQuestions) {
+  const statusEl = document.getElementById('sdk-save-status');
+  const elapsed = getElapsedSeconds();
+  if (window.MathGameSDK) {
+    try {
+      const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+      if (statusEl) {
+        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+    }
+  }
+  await refreshStartButton();
+}
+
+function restartCurrentGame() {
+  startGame();
+}
+
+function goHome() {
+  window.location.href = document.referrer || '../index.html';
+}
+
+window.addEventListener('load', async function () {
+  const playerBox = document.getElementById('sdk-player-box');
+  if (window.MathGameSDK && playerBox) {
+    const player = MathGameSDK.getPlayer();
+    if (player && player.name) {
+      playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+    } else {
+      playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+    }
+  }
+  await refreshStartButton();
+});
+</script>
+</body>
+</html>

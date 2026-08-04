@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เกมผจญภัยค่าประมาณทศนิยม ป.4-ป.5</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti สำหรับเอฟเฟกต์ตอนจบ -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts - Prompt -->
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #E0F2FE; /* Sky 100 */
+    }
+    .custom-shadow {
+      box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.2), 0 8px 10px -6px rgba(14, 165, 233, 0.2);
+    }
+    /* ซ่อนลูกศรใน input type number */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <!-- Container หลัก -->
+  <div class="w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 custom-shadow border-4 border-sky-200 relative overflow-hidden min-h-[520px] flex flex-col justify-between">
+    
+    <!-- ================= หน้าที่ 1: หน้าแรก (Main Menu) ================= -->
+    <div id="main-menu" class="flex flex-col items-center justify-center text-center space-y-6 my-auto">
+      <div id="sdk-player-box" style="font-size:0.85rem;color:#0369a1;"></div>
+      <div id="sdk-start-banner" style="display:none;background:#FEF3C7;border:2px solid #F59E0B;border-radius:12px;padding:10px 14px;font-size:0.85rem;color:#92400E;max-width:480px;"></div>
+      <div class="bg-emerald-100 text-emerald-600 font-bold px-4 py-1.5 rounded-full text-sm sm:text-base animate-bounce">
+        ✨ สำหรับนักเรียนชั้น ป.4 - ป.5 ✨
+      </div>
+      
+      <div class="space-y-2">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-sky-600 tracking-wide">
+          เกมผจญภัย<br class="sm:hidden">ค่าประมาณทศนิยม 🎯
+        </h1>
+        <p class="text-slate-500 text-base sm:text-lg">
+          ฝึกทักษะการปัดเศษทศนิยม สนุก ได้ความรู้ ไม่มีโฆษณา!
+        </p>
+      </div>
+
+      <div class="bg-sky-50 rounded-2xl p-4 border-2 border-sky-100 text-left w-full max-w-md text-slate-600 text-sm sm:text-base space-y-1">
+        <p class="font-semibold text-sky-700 mb-2">📌 โหมดการเรียนรู้ในเกม (10 ข้อ):</p>
+        <p>1️⃣ ค่าประมาณเป็นจำนวนเต็มหน่วย</p>
+        <p>2️⃣ ค่าประมาณเป็นทศนิยม 1 ตำแหน่ง</p>
+        <p>3️⃣ ค่าประมาณเป็นทศนิยม 2 ตำแหน่ง</p>
+      </div>
+
+      <button id="sdk-start-btn" onclick="startGame()" class="w-full max-w-md bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg hover:shadow-xl transform active:scale-95 transition duration-200 border-b-4 border-emerald-700">
+        🚀 เริ่มเล่นเกมเลย!
+      </button>
+    </div>
+
+    <!-- ================= หน้าที่ 2: หน้าเล่นเกม (Gameplay Screen) ================= -->
+    <div id="gameplay-screen" class="hidden flex-col justify-between h-full space-y-6">
+      <!-- ด้านบน: แถบสถานะ -->
+      <div>
+        <div class="flex justify-between items-center text-slate-700 font-bold text-base sm:text-lg mb-2">
+          <span id="question-number" class="bg-sky-100 text-sky-700 px-3 py-1 rounded-xl">ข้อ 1/10</span>
+          <span id="score-display" class="bg-amber-100 text-amber-700 px-3 py-1 rounded-xl">คะแนน: 0</span>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200">
+          <div id="progress-bar" class="bg-sky-400 h-full w-0 transition-all duration-300 ease-out"></div>
+        </div>
+      </div>
+
+      <!-- ตรงกลาง: โจทย์ -->
+      <div class="bg-gradient-to-br from-sky-50 to-emerald-50 border-2 border-sky-200 rounded-3xl p-6 sm:p-8 text-center space-y-4 my-auto">
+        <span id="target-type-badge" class="inline-block bg-sky-500 text-white font-semibold text-sm sm:text-base px-4 py-1 rounded-full shadow-sm">
+          --
+        </span>
+        <div class="text-2xl sm:text-3xl font-extrabold text-slate-800 leading-relaxed" id="question-text">
+          --
+        </div>
+      </div>
+
+      <!-- ช่องกรอกคำตอบ -->
+      <form id="answer-form" onsubmit="submitAnswer(event)" class="space-y-4">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input 
+            type="number" 
+            step="any" 
+            id="user-input" 
+            placeholder="พิมพ์คำตอบที่นี่..." 
+            inputmode="decimal" 
+            required 
+            autocomplete="off"
+            class="w-full text-center text-2xl font-bold py-3 px-4 rounded-2xl border-4 border-sky-200 focus:border-sky-400 focus:outline-none text-slate-700 placeholder-slate-300 bg-white shadow-inner"
+          />
+          <button 
+            type="submit" 
+            id="submit-btn"
+            class="sm:w-48 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xl py-3 px-6 rounded-2xl shadow-md hover:shadow-lg transform active:scale-95 transition duration-200 border-b-4 border-sky-700 whitespace-nowrap"
+          >
+            ส่งคำตอบ ✨
+          </button>
+        </div>
+      </form>
+
+      <!-- ระบบตรวจคำตอบ (Feedback Loop Modal/Box) -->
+      <div id="feedback-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div id="feedback-card" class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 shadow-2xl border-4 transform transition-all">
+          <div id="feedback-icon" class="text-6xl animate-bounce"></div>
+          <h2 id="feedback-title" class="text-2xl font-bold"></h2>
+          <div id="feedback-explanation" class="bg-slate-50 p-4 rounded-2xl text-slate-600 text-base text-left border border-slate-200"></div>
+          <button onclick="nextQuestion()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg py-3 rounded-xl shadow-md border-b-4 border-emerald-700">
+            ลุยข้อต่อไป ➔
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= หน้าที่ 3: หน้าสรุปผล (Results Screen) ================= -->
+    <div id="result-screen" class="hidden flex-col items-center justify-center text-center space-y-6 my-auto">
+      <div id="trophy-icon" class="text-7xl sm:text-8xl">🏆</div>
+      
+      <div class="space-y-2">
+        <h2 class="text-3xl font-extrabold text-slate-800">สรุปผลการแข่งขัน!</h2>
+        <p id="result-rating" class="text-lg font-semibold text-sky-600"></p>
+      </div>
+
+      <div class="bg-sky-50 border-2 border-sky-200 rounded-3xl p-6 w-full max-w-sm space-y-2">
+        <p class="text-slate-500 text-lg">คะแนนที่คุณได้</p>
+        <div class="text-5xl font-extrabold text-emerald-600" id="final-score">0 / 10</div>
+      </div>
+
+      <div id="sdk-save-status" style="font-size:0.85rem;color:#555;"></div>
+
+      <button onclick="restartCurrentGame()" class="w-full max-w-sm bg-sky-500 hover:bg-sky-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg hover:shadow-xl transform active:scale-95 transition duration-200 border-b-4 border-sky-700">
+        🔄 เล่นอีกครั้ง
+      </button>
+      <button onclick="goHome()" class="w-full max-w-sm bg-slate-500 hover:bg-slate-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg hover:shadow-xl transform active:scale-95 transition duration-200 border-b-4 border-slate-700">
+        🏠 ปิดเกม (กลับหน้าหลัก)
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ================= Logic / JavaScript ================= -->
+  <script>
+    // Audio Synthesizer แบบง่าย (ไม่ต้องพึ่งไฟล์เสียงภายนอก)
+    const playSound = (type) => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'correct') {
+          osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+          osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'wrong') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
+          osc.frequency.setValueAtTime(174.61, ctx.currentTime + 0.15); // F3
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+        }
+      } catch (e) {
+        // เบราว์เซอร์ที่ไม่รองรับ Web Audio API จะข้ามไป
+      }
+    };
+
+    // ตัวแปรสถานะของเกม
+    const TOTAL_QUESTIONS = 10;
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let currentQuestionData = null;
+
+    // สุ่มตัวเลขทศนิยมตามความละเอียด
+    function getRandomFloat(min, max, decimals) {
+      const str = (Math.random() * (max - min) + min).toFixed(decimals);
+      return parseFloat(str);
+    }
+
+    // สร้างโจทย์แบบ Dynamic Generation
+    function generateQuestion() {
+      // สุ่มประเภทโจทย์ (1: จำนวนเต็มหน่วย, 2: 1 ตำแหน่ง, 3: 2 ตำแหน่ง)
+      const type = Math.floor(Math.random() * 3) + 1;
+      let num, answer, targetText, ruleExplanation;
+
+      // มีโอกาส 30% ที่จะสุ่มได้เลขท้าทาย (ทดขึ้นเป็นเลข 9 หรือปัดขึ้นเต็มหน่วย)
+      const isChallenge = Math.random() < 0.3;
+
+      if (type === 1) {
+        // ค่าประมาณเป็นจำนวนเต็มหน่วย
+        targetText = "ค่าประมาณเป็นจำนวนเต็มหน่วย";
+        if (isChallenge) {
+          num = getRandomFloat(1, 9, 1) + 0.9; // เช่น 4.9, 12.9
+          num = Math.round(num * 10) / 10;
+        } else {
+          num = getRandomFloat(1, 50, Math.random() < 0.5 ? 1 : 2);
+        }
+
+        answer = Math.round(num);
+        const decVal = Math.floor((num * 10) % 10);
+        ruleExplanation = `พิจารณาทศนิยมตำแหน่งที่ 1 คือเลข <b>${decVal}</b> <br>` +
+          (decVal >= 5 ? `เนื่องจาก ≥ 5 จึงปัดขึ้นเป็น <b>${answer}</b>` : `เนื่องจาก < 5 จึงปัดลงเป็น <b>${answer}</b>`);
+
+      } else if (type === 2) {
+        // ค่าประมาณเป็นทศนิยม 1 ตำแหน่ง
+        targetText = "ค่าประมาณเป็นทศนิยม 1 ตำแหน่ง";
+        if (isChallenge) {
+          // เช่น 4.96 -> 5 หรือ 5.0
+          const intPart = Math.floor(getRandomFloat(1, 20, 0));
+          num = parseFloat(`${intPart}.9${Math.floor(Math.random() * 5) + 5}`);
+        } else {
+          num = getRandomFloat(1, 30, Math.random() < 0.5 ? 2 : 3);
+        }
+
+        answer = Math.round(num * 10) / 10;
+        const secondDec = Math.floor((num * 100) % 10);
+        ruleExplanation = `พิจารณาทศนิยมตำแหน่งที่ 2 คือเลข <b>${secondDec}</b> <br>` +
+          (secondDec >= 5 ? `เนื่องจาก ≥ 5 จึงปัดขึ้นเป็น <b>${answer}</b>` : `เนื่องจาก < 5 จึงปัดลงเป็น <b>${answer}</b>`);
+
+      } else {
+        // ค่าประมาณเป็นทศนิยม 2 ตำแหน่ง
+        targetText = "ค่าประมาณเป็นทศนิยม 2 ตำแหน่ง";
+        if (isChallenge) {
+          const intPart = Math.floor(getRandomFloat(1, 20, 0));
+          const dec1 = Math.floor(Math.random() * 9);
+          num = parseFloat(`${intPart}.${dec1}9${Math.floor(Math.random() * 5) + 5}`);
+        } else {
+          num = getRandomFloat(1, 20, 3);
+        }
+
+        answer = Math.round(num * 100) / 100;
+        const thirdDec = Math.floor((num * 1000) % 10);
+        ruleExplanation = `พิจารณาทศนิยมตำแหน่งที่ 3 คือเลข <b>${thirdDec}</b> <br>` +
+          (thirdDec >= 5 ? `เนื่องจาก ≥ 5 จึงปัดขึ้นเป็น <b>${answer}</b>` : `เนื่องจาก < 5 จึงปัดลงเป็น <b>${answer}</b>`);
+      }
+
+      return {
+        num: num,
+        answer: answer,
+        targetText: targetText,
+        explanation: ruleExplanation
+      };
+    }
+
+    // เริ่มเกม
+    function startGame() {
+      __sdkStartTime = Date.now();
+      score = 0;
+      currentQuestionIndex = 0;
+
+      document.getElementById('main-menu').classList.add('hidden');
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('gameplay-screen').classList.remove('hidden');
+      document.getElementById('gameplay-screen').classList.add('flex');
+
+      loadNextQuestion();
+    }
+
+    // โหลดโจทย์ข้อต่อไป
+    function loadNextQuestion() {
+      currentQuestionIndex++;
+      
+      if (currentQuestionIndex > TOTAL_QUESTIONS) {
+        showResults();
+        return;
+      }
+
+      currentQuestionData = generateQuestion();
+
+      // Update UI
+      document.getElementById('question-number').innerText = `ข้อ ${currentQuestionIndex}/${TOTAL_QUESTIONS}`;
+      document.getElementById('score-display').innerText = `คะแนน: ${score}`;
+      document.getElementById('progress-bar').style.width = `${((currentQuestionIndex - 1) / TOTAL_QUESTIONS) * 100}%`;
+      
+      document.getElementById('target-type-badge').innerText = currentQuestionData.targetText;
+      document.getElementById('question-text').innerHTML = `ค่าประมาณของ <span class="text-sky-600 font-black">${currentQuestionData.num}</span> คือเท่าไร?`;
+      
+      const input = document.getElementById('user-input');
+      input.value = '';
+      input.focus();
+    }
+
+    // ตรวจคำตอบ
+    function submitAnswer(event) {
+      event.preventDefault();
+      const inputEl = document.getElementById('user-input');
+      const userVal = parseFloat(inputEl.value);
+
+      if (isNaN(userVal)) return;
+
+      const isCorrect = Math.abs(userVal - currentQuestionData.answer) < 0.0001;
+      
+      const modal = document.getElementById('feedback-modal');
+      const card = document.getElementById('feedback-card');
+      const icon = document.getElementById('feedback-icon');
+      const title = document.getElementById('feedback-title');
+      const exp = document.getElementById('feedback-explanation');
+
+      if (isCorrect) {
+        score++;
+        playSound('correct');
+        card.className = "bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 shadow-2xl border-4 border-emerald-400";
+        icon.innerText = "🎉";
+        title.className = "text-2xl font-bold text-emerald-600";
+        title.innerText = "ถูกต้องครับ! เก่งมาก";
+        exp.innerHTML = `<b>คำตอบคือ ${currentQuestionData.answer}</b><br><span class="text-slate-500 text-sm">${currentQuestionData.explanation}</span>`;
+      } else {
+        playSound('wrong');
+        card.className = "bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 shadow-2xl border-4 border-rose-400";
+        icon.innerText = "😅";
+        title.className = "text-2xl font-bold text-rose-500";
+        title.innerText = "ยังไม่ถูกต้องนะ!";
+        exp.innerHTML = `<b>เฉลยที่ถูกต้องคือ: <span class="text-emerald-600">${currentQuestionData.answer}</span></b><br><hr class="my-2 border-slate-200"><span class="text-slate-600 text-sm"><b>วิธีคิด:</b> ${currentQuestionData.explanation}</span>`;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    // ปิด Feedback แล้วไปข้อถัดไป
+    function nextQuestion() {
+      document.getElementById('feedback-modal').classList.add('hidden');
+      loadNextQuestion();
+    }
+
+    // แสดงหน้าสรุปผล
+    function showResults() {
+      sdkSubmitScore(score, TOTAL_QUESTIONS);
+      document.getElementById('gameplay-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+      document.getElementById('result-screen').classList.add('flex');
+
+      document.getElementById('final-score').innerText = `${score} / ${TOTAL_QUESTIONS}`;
+
+      const trophy = document.getElementById('trophy-icon');
+      const rating = document.getElementById('result-rating');
+
+      if (score === 10) {
+        trophy.innerText = "🏆";
+        rating.innerText = "ยอดเยี่ยมที่สุด! เซียนทศนิยมตัวจริง 🌟";
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      } else if (score >= 7) {
+        trophy.innerText = "🥇";
+        rating.innerText = "เก่งมากเลย! อีกนิดเดียวจะเต็มแล้ว 👏";
+      } else if (score >= 5) {
+        trophy.innerText = "🥈";
+        rating.innerText = "ผ่านเกณฑ์แล้ว! พยายามฝึกฝนอีกนิดนะ ✌️";
+      } else {
+        trophy.innerText = "พยายามอีกนิดนะ! 🥊";
+        rating.innerText = "ไม่เป็นไรนะ ลองทบทวนวิธีคิดแล้วเล่นใหม่อีกครั้ง!";
+      }
+    }
+  
+
+/* ===================== MathGame SDK Integration ===================== */
+const GAME_ID = 'game8';
+let __sdkStartTime = null;
+
+function getElapsedSeconds() {
+  return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+}
+
+async function refreshStartButton() {
+  const btn = document.getElementById('sdk-start-btn');
+  const banner = document.getElementById('sdk-start-banner');
+  if (!window.MathGameSDK || !btn || !banner) return;
+  try {
+    const status = await MathGameSDK.getGameStatus(GAME_ID);
+    if (!status.played) {
+      btn.disabled = false;
+      banner.style.display = 'none';
+    } else if (status.hearts === null || status.hearts > 0) {
+      btn.disabled = false;
+      banner.style.display = 'block';
+      banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+    } else {
+      btn.disabled = true;
+      banner.style.display = 'block';
+      banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+    }
+  } catch (e) {}
+}
+
+async function sdkSubmitScore(finalScore, totalQuestions) {
+  const statusEl = document.getElementById('sdk-save-status');
+  const elapsed = getElapsedSeconds();
+  if (window.MathGameSDK) {
+    try {
+      const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+      if (statusEl) {
+        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+    }
+  }
+  await refreshStartButton();
+}
+
+function restartCurrentGame() {
+  startGame();
+}
+
+function goHome() {
+  window.location.href = document.referrer || '../index.html';
+}
+
+window.addEventListener('load', async function () {
+  const playerBox = document.getElementById('sdk-player-box');
+  if (window.MathGameSDK && playerBox) {
+    const player = MathGameSDK.getPlayer();
+    if (player && player.name) {
+      playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+    } else {
+      playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+    }
+  }
+  await refreshStartButton();
+});
+</script>
+</body>
+</html>

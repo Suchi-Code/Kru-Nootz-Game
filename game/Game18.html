@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมคณิตศาสตร์ ป.6: ถอดรหัสแบบรูป (Patterns Lab)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Animate.css สำหรับเอฟเฟกต์แอนิเมชัน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts - Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 100%);
+            color: #f8fafc;
+        }
+        .btn-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Container หลัก (Theme Space Lab) -->
+    <div class="bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-indigo-500/30 w-full max-w-2xl overflow-hidden p-6 relative">
+
+        <!-- 1. หน้าเมนูหลัก (Main Menu) -->
+        <div id="screen-menu" class="text-center py-8 animate__animated animate__fadeIn">
+            <div class="inline-block p-4 bg-indigo-950/80 border border-cyan-500/40 rounded-full mb-4 shadow-lg shadow-cyan-500/10">
+                <i data-lucide="sparkles" class="w-16 h-16 text-cyan-400"></i>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-fuchsia-400 mb-2">
+                ถอดรหัสแบบรูปคณิตศาสตร์ ป.6
+            </h1>
+            <p class="text-slate-300 mb-6 text-base sm:text-lg">ไขปริศนาความสัมพันธ์ของจำนวนและรูปภาพ 10 ภารกิจ!</p>
+
+            <div id="sdk-player-box" class="text-sm text-cyan-300 mb-2"></div>
+            <div id="sdk-start-banner" class="hidden bg-amber-950/60 border-2 border-amber-500 rounded-xl p-3 mb-3 text-sm text-amber-200 max-w-md mx-auto"></div>
+
+            <div class="bg-indigo-950/50 border border-indigo-800/60 rounded-2xl p-4 max-w-md mx-auto mb-8 text-left text-sm text-slate-300 space-y-2">
+                <p class="font-bold text-cyan-300 flex items-center gap-2">
+                    <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i> ทักษะแบบรูปที่คุณจะได้ท้าทาย:
+                </p>
+                <p>• แบบรูปจำนวนเพิ่มขึ้น / ลดลงอย่างเป็นระบบ</p>
+                <p>• แบบรูปความสัมพันธ์การคูณและการหาร</p>
+                <p>• การหาจำนวนในลำดับที่ $n$ (เช่น รูปที่ 20 หรือรูปที่ 50)</p>
+                <p>• วิเคราะห์จำนวนชิ้นส่วนจากแบบรูปเรขาคณิต</p>
+            </div>
+
+            <button id="sdk-start-btn" onclick="startGame()" class="btn-hover bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-lg font-bold py-4 px-10 rounded-2xl shadow-lg shadow-cyan-500/25 inline-flex items-center gap-3">
+                <i data-lucide="play" class="w-7 h-7 fill-white"></i> เริ่มต้นภารกิจ (10 ข้อ)
+            </button>
+        </div>
+
+        <!-- 2. หน้าเล่นเกม (Game Screen) -->
+        <div id="screen-game" class="hidden animate__animated animate__fadeIn">
+            <!-- Header: แถบความคืบหน้า และ คะแนน -->
+            <div class="flex items-center justify-between mb-4">
+                <div></div>
+                <div class="text-sm font-semibold text-slate-300">
+                    ข้อที่ <span id="current-question-num" class="text-cyan-400 text-lg font-bold">1</span> / 10
+                </div>
+                <div class="bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400"></i> คะแนน: <span id="current-score">0</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden mb-6 border border-slate-700">
+                <div id="progress-bar" class="bg-gradient-to-r from-cyan-400 to-indigo-500 h-full w-0 transition-all duration-300"></div>
+            </div>
+
+            <!-- กล่องโจทย์คำถาม -->
+            <div class="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 mb-6 text-center shadow-inner">
+                <h2 id="question-title" class="text-base sm:text-lg font-bold text-cyan-200 mb-4"></h2>
+                
+                <!-- พื้นที่แสดงโจทย์แบบรูป (ตัวเลข หรือ ภาพ SVG) -->
+                <div id="question-display" class="w-full min-h-[160px] flex items-center justify-center bg-slate-900/90 rounded-xl border border-slate-700 p-4">
+                    <!-- ดึงข้อมูลด้วย JS -->
+                </div>
+            </div>
+
+            <!-- ตัวเลือกคำตอบ 4 ปุ่ม -->
+            <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <!-- สร้างปุ่มผ่าน JavaScript -->
+            </div>
+
+            <!-- ส่วนแสดง Feedback และเฉลยวิธีคิด -->
+            <div id="feedback-box" class="hidden p-4 rounded-xl text-center mb-4 animate__animated animate__fadeInUp">
+                <p id="feedback-text" class="font-semibold text-sm sm:text-base"></p>
+                <button id="next-btn" onclick="nextQuestion()" class="mt-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 px-6 rounded-xl btn-hover text-sm inline-flex items-center gap-2">
+                    ข้อถัดไป <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. หน้าสรุปคะแนน (Summary Screen) -->
+        <div id="screen-summary" class="hidden text-center py-8 animate__animated animate__zoomIn">
+            <div class="inline-block p-4 bg-indigo-950/80 border border-cyan-500/40 rounded-full mb-4 shadow-lg shadow-cyan-500/10">
+                <i data-lucide="trophy" class="w-16 h-16 text-amber-400"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-100 mb-2">ประมวลผลภารกิจเรียบร้อย!</h1>
+            <p class="text-slate-400 mb-6">สรุปคะแนนการทดสอบเรื่องแบบรูป ป.6</p>
+
+            <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-6 max-w-sm mx-auto mb-8 shadow-xl">
+                <div class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-400 mb-2" id="final-score">0 / 10</div>
+                <p id="final-eval" class="text-slate-200 font-bold text-lg"></p>
+                <div id="sdk-save-status" class="text-sm text-slate-400 mt-2"></div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                <button onclick="restartCurrentGame()" class="btn-hover bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/20 flex-1 flex items-center justify-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i> เล่นอีกครั้ง
+                </button>
+                <button onclick="goHome()" class="btn-hover bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 flex-1 flex items-center justify-center gap-2">
+                    <i data-lucide="home" class="w-5 h-5"></i> ปิดเกม (กลับหน้าหลัก)
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript LOGIC -->
+    <script>
+        // --- คลังโจทย์แบบรูป ป.6 จำนวน 10 ข้อ (Question Pool) ---
+        const questionPool = [
+            {
+                id: 1,
+                title: "หาตัวเลขถัดไปในแบบรูปที่กำหนดให้",
+                type: "sequence",
+                data: [12, 19, 26, 33, 40, "?"],
+                correctAnswer: 47,
+                wrongAnswers: [45, 46, 48],
+                explanation: "แบบรูปเพิ่มขึ้นทีละ 7 เท่าๆ กัน (12 (+7) -> 19 (+7) -> 26 (+7) -> 33 (+7) -> 40 (+7) -> 47)"
+            },
+            {
+                id: 2,
+                title: "หาตัวเลขถัดไปในแบบรูปที่กำหนดให้",
+                type: "sequence",
+                data: [256, 128, 64, 32, 16, "?"],
+                correctAnswer: 8,
+                wrongAnswers: [4, 6, 10],
+                explanation: "แบบรูปเกิดจากการหารด้วย 2 ทีละลำดับ (256 (÷2) -> 128 (÷2) -> 64 (÷2) -> 32 (÷2) -> 16 (÷2) -> 8)"
+            },
+            {
+                id: 3,
+                title: "หาตัวเลขถัดไปในแบบรูปที่กำหนดให้",
+                type: "sequence",
+                data: [3, 9, 27, 81, "?"],
+                correctAnswer: 243,
+                wrongAnswers: [162, 216, 240],
+                explanation: "แบบรูปเกิดจากการคูณด้วย 3 เพิ่มขึ้นทีละเท่าตัว (81 × 3 = 243)"
+            },
+            {
+                id: 4,
+                title: "หาตัวเลขถัดไปในแบบรูปที่มีความสัมพันธ์แบบสองชั้น",
+                type: "sequence",
+                data: [2, 5, 10, 17, 26, "?"],
+                correctAnswer: 37,
+                wrongAnswers: [33, 35, 36],
+                explanation: "ระยะห่างของตัวเลขเพิ่มขึ้นเรื่อยๆ ทีละเลขคี่: +3, +5, +7, +9, ดังนั้นตัวถัดไปคือ +11 (26 + 11 = 37)"
+            },
+            {
+                id: 5,
+                title: "พิจารณาความสัมพันธ์ของลำดับรูปทรง แล้วหาจำนวนในรูปที่กำหนด",
+                type: "visual-matches",
+                promptText: "รูปที่ 1 ใช้ไม้ขีด 3 ก้าน, รูปที่ 2 ใช้ 5 ก้าน, รูปที่ 3 ใช้ 7 ก้าน ... อยากทราบว่า 'รูปที่ 20' ต้องใช้ไม้ขีดกี่ก้าน?",
+                correctAnswer: 41,
+                wrongAnswers: [39, 40, 43],
+                explanation: "สูตรความสัมพันธ์คือ (ลำดับรูปที่ × 2) + 1 ดังนั้น รูปที่ 20 ใช้ไม้ขีด (20 × 2) + 1 = 41 ก้าน"
+            },
+            {
+                id: 6,
+                title: "พิจารณาความสัมพันธ์เชิงฟังก์ชัน (ลำดับที่ n)",
+                type: "pattern-fn",
+                promptText: "กำหนดตารางแสดงความสัมพันธ์ระหว่างลำดับที่ (n) กับผลลัพธ์:",
+                tableData: [
+                    { n: 1, val: 5 },
+                    { n: 2, val: 9 },
+                    { n: 3, val: 13 },
+                    { n: 4, val: 17 }
+                ],
+                targetPrompt: "อยากทราบว่าถ้าลำดับที่ n = 50 ผลลัพธ์จะมีค่าเท่าใด?",
+                correctAnswer: 201,
+                wrongAnswers: [197, 200, 205],
+                explanation: "สูตรความสัมพันธ์คือ (n × 4) + 1 ดังนั้น เมื่อ n = 50 จะได้ (50 × 4) + 1 = 201"
+            },
+            {
+                id: 7,
+                title: "พิจารณาแบบรูปการต่อบล็อกลูกบาศก์",
+                type: "visual-cubes",
+                promptText: "รูปที่ 1 มีลูกบาศก์ 2 ลูก, รูปที่ 2 มี 5 ลูก, รูปที่ 3 มี 8 ลูก ... อยากทราบว่า 'รูปที่ 15' จะมีลูกบาศก์กี่ลูก?",
+                correctAnswer: 44,
+                wrongAnswers: [42, 45, 47],
+                explanation: "สูตรความสัมพันธ์คือ (ลำดับรูปที่ × 3) - 1 ดังนั้น รูปที่ 15 มีลูกบาศก์ (15 × 3) - 1 = 44 ลูก"
+            },
+            {
+                id: 8,
+                title: "หาตัวเลขในตำแหน่งที่หายไปของแบบรูป",
+                type: "sequence",
+                data: [100, 93, 86, "?", 72, 65],
+                correctAnswer: 79,
+                wrongAnswers: [77, 78, 80],
+                explanation: "แบบรูปนี้เป็นการลดลงทีละ 7 อย่างสม่ำเสมอ (86 - 7 = 79)"
+            },
+            {
+                id: 9,
+                title: "ความสัมพันธ์ของการปูกระเบื้องรูปสามเหลี่ยม",
+                type: "visual-tiles",
+                promptText: "การจัดวางแผ่นกระเบื้อง: รูปที่ 1 ใช้ 1 แผ่น, รูปที่ 2 ใช้ 4 แผ่น, รูปที่ 3 ใช้ 9 แผ่น ... 'รูปที่ 12' ต้องใช้กระเบื้องทั้งหมดกี่แผ่น?",
+                correctAnswer: 144,
+                wrongAnswers: [120, 132, 140],
+                explanation: "ความสัมพันธ์คือ จำนวนกระเบื้อง = (ลำดับรูปที่) × (ลำดับรูปที่) หรือ n² ดังนั้น รูปที่ 12 ใช้ 12 × 12 = 144 แผ่น"
+            },
+            {
+                id: 10,
+                title: "พิจารณาความสัมพันธ์เชิงฟังก์ชัน (ลำดับที่ n)",
+                type: "pattern-fn",
+                promptText: "ชุดแบบรูปจำนวน: 4, 7, 10, 13, 16, ...",
+                targetPrompt: "พจน์ที่ 30 ของแบบรูปชุดนี้มีค่าเท่ากับเท่าใด?",
+                correctAnswer: 91,
+                wrongAnswers: [88, 90, 93],
+                explanation: "สูตรความสัมพันธ์พจน์ที่ n คือ (n × 3) + 1 ดังนั้น พจน์ที่ 30 คือ (30 × 3) + 1 = 91"
+            }
+        ];
+
+        // --- Game State ---
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        // --- ฟังก์ชันสุ่มเรียงอาร์เรย์ (Shuffle) ---
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // --- ฟังก์ชันวาดรูปภาพเรขาคณิต SVG แบบ Dynamic ---
+        function renderVisualSVG(type) {
+            if (type === 'visual-matches') {
+                // วาดสามเหลี่ยมไม้ขีดไฟ (รูปที่ 1, 2, 3)
+                return `
+                    <div class="flex flex-wrap justify-center items-center gap-6 py-2">
+                        <div class="text-center">
+                            <svg width="60" height="60" viewBox="0 0 60 60" class="mx-auto">
+                                <line x1="30" y1="10" x2="10" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="30" y1="10" x2="50" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="10" y1="50" x2="50" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                            </svg>
+                            <span class="text-xs text-slate-400 mt-1 block">รูปที่ 1 (3 ก้าน)</span>
+                        </div>
+                        <div class="text-center">
+                            <svg width="90" height="60" viewBox="0 0 90 60" class="mx-auto">
+                                <line x1="30" y1="10" x2="10" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="30" y1="10" x2="50" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="10" y1="50" x2="50" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="50" y1="50" x2="70" y2="10" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="30" y1="10" x2="70" y2="10" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                            </svg>
+                            <span class="text-xs text-slate-400 mt-1 block">รูปที่ 2 (5 ก้าน)</span>
+                        </div>
+                        <div class="text-center">
+                            <svg width="120" height="60" viewBox="0 0 120 60" class="mx-auto">
+                                <line x1="30" y1="10" x2="10" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="30" y1="10" x2="50" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="10" y1="50" x2="50" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="50" y1="50" x2="70" y2="10" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="30" y1="10" x2="70" y2="10" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="70" y1="10" x2="90" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                                <line x1="50" y1="50" x2="90" y2="50" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                            </svg>
+                            <span class="text-xs text-slate-400 mt-1 block">รูปที่ 3 (7 ก้าน)</span>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'visual-cubes') {
+                // วาดบล็อกลูกบาศก์
+                return `
+                    <div class="flex flex-wrap justify-center items-end gap-6 py-2">
+                        <div class="text-center">
+                            <div class="flex flex-col gap-1 items-center">
+                                <div class="w-6 h-6 bg-cyan-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-cyan-500 rounded border border-white/40"></div>
+                            </div>
+                            <span class="text-xs text-slate-400 mt-2 block">รูปที่ 1 (2 ลูก)</span>
+                        </div>
+                        <div class="text-center">
+                            <div class="flex flex-col gap-1 items-center">
+                                <div class="w-6 h-6 bg-indigo-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-indigo-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-indigo-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-indigo-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-indigo-500 rounded border border-white/40"></div>
+                            </div>
+                            <span class="text-xs text-slate-400 mt-2 block">รูปที่ 2 (5 ลูก)</span>
+                        </div>
+                        <div class="text-center">
+                            <div class="flex flex-col gap-1 items-center">
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                                <div class="w-6 h-6 bg-fuchsia-500 rounded border border-white/40"></div>
+                            </div>
+                            <span class="text-xs text-slate-400 mt-2 block">รูปที่ 3 (8 ลูก)</span>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'visual-tiles') {
+                // วาดแผ่นกระเบื้องตาราง
+                return `
+                    <div class="flex flex-wrap justify-center items-end gap-6 py-2">
+                        <div class="text-center">
+                            <div class="grid grid-cols-1 gap-1 w-6 h-6 mx-auto">
+                                <div class="bg-amber-400 rounded-sm"></div>
+                            </div>
+                            <span class="text-xs text-slate-400 mt-2 block">รูปที่ 1 (1 แผ่น)</span>
+                        </div>
+                        <div class="text-center">
+                            <div class="grid grid-cols-2 gap-1 w-12 h-12 mx-auto">
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                            </div>
+                            <span class="text-xs text-slate-400 mt-2 block">รูปที่ 2 (4 แผ่น)</span>
+                        </div>
+                        <div class="text-center">
+                            <div class="grid grid-cols-3 gap-1 w-16 h-16 mx-auto">
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                                <div class="bg-amber-400 rounded-sm"></div>
+                            </div>
+                            <span class="text-xs text-slate-400 mt-2 block">รูปที่ 3 (9 แผ่น)</span>
+                        </div>
+                    </div>
+                `;
+            }
+            return '';
+        }
+
+        // --- ระบบเกมการเล่น ---
+
+        function startGame() {
+            __sdkStartTime = Date.now();
+            // สุ่มลำดับโจทย์ 10 ข้อจากคลัง
+            questions = shuffleArray(questionPool).map(q => {
+                // สุ่มสลับตัวเลือก 4 ปุ่มในแต่ละข้อ
+                const allOptions = shuffleArray([q.correctAnswer, ...q.wrongAnswers]);
+                return { ...q, options: allOptions };
+            });
+
+            currentQuestionIndex = 0;
+            score = 0;
+
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-summary').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            const q = questions[currentQuestionIndex];
+
+            // อัปเดตข้อมูล UI
+            document.getElementById('current-question-num').textContent = currentQuestionIndex + 1;
+            document.getElementById('current-score').textContent = score;
+            document.getElementById('progress-bar').style.width = `${((currentQuestionIndex) / 10) * 100}%`;
+            document.getElementById('feedback-box').classList.add('hidden');
+            document.getElementById('question-title').textContent = q.title;
+
+            const displayContainer = document.getElementById('question-display');
+            displayContainer.innerHTML = '';
+
+            // Render ตามประเภทโจทย์
+            if (q.type === 'sequence') {
+                const seqHTML = q.data.map(num => `
+                    <div class="px-3 py-2 sm:px-4 sm:py-3 bg-slate-800 border-2 ${num === '?' ? 'border-amber-400 text-amber-300 animate__animated animate__pulse animate__infinite' : 'border-indigo-500/40 text-cyan-300'} rounded-xl text-xl sm:text-2xl font-black shadow-md">
+                        ${num}
+                    </div>
+                `).join('<i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>');
+
+                displayContainer.innerHTML = `<div class="flex flex-wrap items-center justify-center gap-2">${seqHTML}</div>`;
+            } else if (q.type.startsWith('visual-')) {
+                displayContainer.innerHTML = `
+                    <div class="w-full">
+                        <p class="text-sm text-slate-300 mb-3 text-center">${q.promptText}</p>
+                        ${renderVisualSVG(q.type)}
+                    </div>
+                `;
+            } else if (q.type === 'pattern-fn') {
+                if (q.tableData) {
+                    const rowsHTML = q.tableData.map(row => `
+                        <tr class="border-b border-slate-700/50">
+                            <td class="py-1.5 px-4 text-cyan-300 font-bold">${row.n}</td>
+                            <td class="py-1.5 px-4 text-amber-300 font-bold">${row.val}</td>
+                        </tr>
+                    `).join('');
+
+                    displayContainer.innerHTML = `
+                        <div class="w-full">
+                            <p class="text-sm text-slate-300 mb-2">${q.promptText}</p>
+                            <table class="mx-auto text-sm bg-slate-800/90 rounded-xl overflow-hidden border border-slate-700 mb-3">
+                                <thead class="bg-indigo-950 text-slate-300">
+                                    <tr>
+                                        <th class="py-1.5 px-4">ลำดับที่ (n)</th>
+                                        <th class="py-1.5 px-4">ค่าที่ได้</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHTML}</tbody>
+                            </table>
+                            <p class="text-sm font-bold text-cyan-200">${q.targetPrompt}</p>
+                        </div>
+                    `;
+                } else {
+                    displayContainer.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-lg font-bold text-amber-300 mb-2">${q.promptText}</p>
+                            <p class="text-sm font-bold text-cyan-200">${q.targetPrompt}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // สร้างปุ่มตัวเลือกคำตอบ 4 ตัวเลือก
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full btn-hover bg-slate-800/90 hover:bg-slate-700/80 text-slate-200 font-bold py-3.5 px-4 rounded-xl border border-slate-700 text-left flex items-center justify-between text-base shadow-md transition-all";
+                btn.innerHTML = `<span>${opt}</span> <i data-lucide="circle" class="w-5 h-5 text-slate-500 opt-icon"></i>`;
+                btn.onclick = () => checkAnswer(opt, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            lucide.createIcons();
+        }
+
+        function checkAnswer(selectedOption, selectedBtn) {
+            if (isAnswered) return; // ป้องกันกดซ้ำ
+            isAnswered = true;
+
+            const q = questions[currentQuestionIndex];
+            const allButtons = document.getElementById('options-container').children;
+            const feedbackBox = document.getElementById('feedback-box');
+            const feedbackText = document.getElementById('feedback-text');
+
+            if (selectedOption === q.correctAnswer) {
+                // ตอบถูก
+                score++;
+                document.getElementById('current-score').textContent = score;
+                selectedBtn.className = "w-full bg-emerald-500 text-slate-950 font-black py-3.5 px-4 rounded-xl border-2 border-emerald-400 text-left flex items-center justify-between text-base shadow-lg shadow-emerald-500/20 animate__animated animate__rubberBand";
+                selectedBtn.querySelector('.opt-icon').replaceWith(createIconNode('check-circle-2'));
+
+                feedbackBox.className = "p-4 rounded-xl text-center mb-4 bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 animate__animated animate__fadeInUp";
+                feedbackText.innerHTML = `🎉 <strong>คำตอบถูกต้อง!</strong><br><span class="text-xs sm:text-sm font-normal text-emerald-300">${q.explanation}</span>`;
+            } else {
+                // ตอบผิด
+                selectedBtn.className = "w-full bg-rose-500 text-white font-bold py-3.5 px-4 rounded-xl border-2 border-rose-400 text-left flex items-center justify-between text-base shadow-lg animate__animated animate__shakeX";
+                selectedBtn.querySelector('.opt-icon').replaceWith(createIconNode('x-circle'));
+
+                // ไฮไลต์ตัวเลือกที่ถูก
+                Array.from(allButtons).forEach(btn => {
+                    if (btn.querySelector('span').textContent.trim() == q.correctAnswer) {
+                        btn.className = "w-full bg-emerald-900/80 text-emerald-200 font-bold py-3.5 px-4 rounded-xl border-2 border-emerald-500 text-left flex items-center justify-between text-base";
+                    }
+                });
+
+                feedbackBox.className = "p-4 rounded-xl text-center mb-4 bg-rose-950/80 border border-rose-500/40 text-rose-200 animate__animated animate__fadeInUp";
+                feedbackText.innerHTML = `😅 <strong>ยังไม่ถูกต้อง!</strong> คำตอบคือ <strong>${q.correctAnswer}</strong><br><span class="text-xs sm:text-sm font-normal text-rose-300">${q.explanation}</span>`;
+            }
+
+            feedbackBox.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function createIconNode(iconName) {
+            const i = document.createElement('i');
+            i.setAttribute('data-lucide', iconName);
+            i.className = "w-5 h-5";
+            return i;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < 10) {
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            sdkSubmitScore(score, 10);
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-summary').classList.remove('hidden');
+
+            document.getElementById('final-score').textContent = `${score} / 10`;
+            
+            // ประเมินผลคะแนน
+            const evalText = document.getElementById('final-eval');
+            if (score === 10) evalText.textContent = "🏆 อัจฉริยะแบบรูป! คุณวิเคราะห์ความสัมพันธ์ได้อย่างสมบูรณ์แบบ";
+            else if (score >= 7) evalText.textContent = "🌟 ยอดเยี่ยมมาก! ทักษะการคิดวิเคราะห์แบบรูปอยู่ในเกณฑ์ดีเยี่ยม";
+            else if (score >= 5) evalText.textContent = "👍 ทำได้ดี! ลองฝึกทบทวนการหาลำดับพจน์ที่ n อีกนิดจะเก่งยิ่งขึ้น";
+            else evalText.textContent = "✌️ พยายามอีกนิดนะครับ ลองกดเล่นอีกครั้งเพื่อฝึกฝนทักษะ!";
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function showMenu() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-summary').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+        }
+
+        // เริ่มต้นโหลด Lucide Icons
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+        });
+    
+
+        /* ===================== MathGame SDK Integration ===================== */
+        const GAME_ID = 'game18';
+        let __sdkStartTime = null;
+
+        function getElapsedSeconds() {
+            return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+        }
+
+        async function refreshStartButton() {
+            const btn = document.getElementById('sdk-start-btn');
+            const banner = document.getElementById('sdk-start-banner');
+            if (!window.MathGameSDK || !btn || !banner) return;
+            try {
+                const status = await MathGameSDK.getGameStatus(GAME_ID);
+                if (!status.played) {
+                    btn.disabled = false;
+                    banner.classList.add('hidden');
+                } else if (status.hearts === null || status.hearts > 0) {
+                    btn.disabled = false;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+                } else {
+                    btn.disabled = true;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+                }
+            } catch (e) {}
+        }
+
+        async function sdkSubmitScore(finalScore, totalQuestions) {
+            const statusEl = document.getElementById('sdk-save-status');
+            const elapsed = getElapsedSeconds();
+            if (window.MathGameSDK) {
+                try {
+                    const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+                    if (statusEl) {
+                        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            }
+            await refreshStartButton();
+        }
+
+        function restartCurrentGame() {
+            startGame();
+        }
+
+        function goHome() {
+            window.location.href = document.referrer || '../index.html';
+        }
+
+        window.addEventListener('load', async function () {
+            const playerBox = document.getElementById('sdk-player-box');
+            if (window.MathGameSDK && playerBox) {
+                const player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+                }
+            }
+            await refreshStartButton();
+        });
+</script>
+</body>
+</html>
