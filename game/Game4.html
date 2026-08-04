@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เกมถอดรหัสวิหารลึกลับ 10 ภารกิจ - แบบรูป ป.6</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Canvas Confetti CDN -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+body {
+font-family: 'Sarabun', sans-serif;
+background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+}
+.shake {
+animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes shake {
+10%, 90% { transform: translate3d(-1px, 0, 0); }
+20%, 80% { transform: translate3d(2px, 0, 0); }
+30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="min-h-screen text-white flex flex-col justify-between p-4">
+
+<!-- Screen: Start -->
+<div id="screen-start" class="max-w-2xl mx-auto w-full text-center my-auto py-10 space-y-6">
+  <div class="text-6xl">🏰</div>
+  <h2 class="text-2xl md:text-3xl font-extrabold text-amber-400">วิหารลึกลับแห่งตัวเลข</h2>
+  <p class="text-indigo-200 text-sm md:text-base max-w-md mx-auto">ถอดรหัสลับเพื่อสะสมคะแนน 10 ด่าน (คณิตศาสตร์ ป.6)</p>
+  <div id="sdk-player-box" class="text-sm text-amber-300"></div>
+  <div id="sdk-start-banner" class="hidden bg-amber-950/60 border-2 border-amber-500 rounded-xl p-3 text-sm text-amber-200 max-w-md mx-auto"></div>
+  <button id="sdk-start-btn" onclick="beginGame()" class="bg-amber-500 hover:bg-amber-400 text-indigo-950 font-bold px-8 py-4 rounded-2xl text-xl shadow-lg transition">
+    🚀 เริ่มไขปริศนา
+  </button>
+</div>
+
+<!-- Header -->
+<header id="game-header" class="hidden text-center my-2">
+<h1 class="text-3xl md:text-5xl font-extrabold text-amber-400 drop-shadow-md mb-2">
+🏰 วิหารลึกลับแห่งตัวเลข (10 ภารกิจ)
+</h1>
+<p class="text-indigo-200 text-sm md:text-base">
+ถอดรหัสลับเพื่อสะสมคะแนน 10 ด่าน (คณิตศาสตร์ ป.6)
+</p>
+</header>
+
+<!-- Scorebar & Progress -->
+<div id="game-scorebar" class="hidden max-w-4xl mx-auto w-full flex justify-between items-center bg-indigo-950/80 p-3 rounded-2xl border border-amber-500/40 mb-4 backdrop-blur-sm">
+  <div class="flex items-center space-x-2">
+    <span class="text-amber-400 font-bold text-sm md:text-base">ด่านที่:</span>
+    <span id="level-display" class="bg-amber-500 text-indigo-950 px-3 py-1 rounded-full font-extrabold text-sm md:text-base">1 / 10</span>
+  </div>
+  <div class="flex items-center space-x-2">
+    <span class="text-emerald-400 font-bold text-sm md:text-base">คะแนนสะสม:</span>
+    <span id="score-display" class="bg-emerald-500 text-indigo-950 px-3 py-1 rounded-full font-extrabold text-sm md:text-base">0 คะแนน</span>
+  </div>
+</div>
+
+<!-- Main Container -->
+<main id="game-main" class="hidden max-w-4xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 my-auto">
+
+<!-- Left Column: Current Puzzle (7 Cols) -->
+<section class="lg:col-span-7 space-y-4">
+  <div class="bg-indigo-900/90 border-2 border-indigo-500/50 rounded-2xl p-6 shadow-xl backdrop-blur-sm relative min-h-[280px] flex flex-col justify-between">
+    <div>
+      <div class="flex justify-between items-center mb-3">
+        <span id="puzzle-title" class="bg-amber-500 text-indigo-950 font-bold px-3 py-1 rounded-full text-xs md:text-sm">
+          รหัสภารกิจ
+        </span>
+        <button onclick="toggleHint()" class="text-xs text-amber-300 hover:underline bg-indigo-950/50 px-3 py-1 rounded-lg border border-amber-500/30">💡 คำใบ้</button>
+      </div>
+      
+      <p id="puzzle-concept" class="text-gray-200 font-semibold mb-2 text-lg">หัวข้อแบบรูป</p>
+      
+      <div id="puzzle-sequence" class="bg-indigo-950/80 p-4 rounded-xl text-center text-xl md:text-2xl font-bold tracking-widest text-emerald-400 my-4 border border-indigo-800">
+        -
+      </div>
+      
+      <p id="puzzle-instruction" class="text-xs md:text-sm text-gray-300">
+        *นำคำตอบไปกดใส่รหัสบนแท่นถอดรหัส
+      </p>
+    </div>
+
+    <!-- Hint Container -->
+    <div id="hint-box" class="hidden mt-3 p-3 bg-indigo-950/90 rounded-xl text-xs md:text-sm text-amber-200 border border-amber-500/40">
+      -
+    </div>
+  </div>
+</section>
+
+<!-- Right Column: Lock Keypad (5 Cols) -->
+<section class="lg:col-span-5 flex flex-col justify-center">
+<div id="keypad-card" class="bg-indigo-950 border-4 border-amber-500/80 rounded-3xl p-6 shadow-2xl text-center">
+
+<div class="text-amber-400 text-sm font-bold mb-2">🔐 แท่นถอดรหัสวิหาร</div>
+
+<!-- Code Screen -->
+<div id="screen" class="bg-black/80 border-2 border-amber-400/50 rounded-2xl py-4 mb-4 flex justify-center items-center space-x-2 text-3xl font-mono tracking-widest text-emerald-400 h-16 shadow-inner">
+<span class="slot border-b-4 border-emerald-500 w-8 text-center">-</span>
+<span class="slot border-b-4 border-emerald-500 w-8 text-center">-</span>
+</div>
+
+<!-- Numpad -->
+<div class="grid grid-cols-3 gap-2 mb-3">
+<button onclick="pressNum('1')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">1</button>
+<button onclick="pressNum('2')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">2</button>
+<button onclick="pressNum('3')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">3</button>
+<button onclick="pressNum('4')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">4</button>
+<button onclick="pressNum('5')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">5</button>
+<button onclick="pressNum('6')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">6</button>
+<button onclick="pressNum('7')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">7</button>
+<button onclick="pressNum('8')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">8</button>
+<button onclick="pressNum('9')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">9</button>
+<button onclick="clearCode()" class="bg-rose-800 hover:bg-rose-700 active:scale-95 text-xs font-bold py-2.5 rounded-xl transition shadow text-rose-200">ล้าง</button>
+<button onclick="pressNum('0')" class="bg-indigo-800 hover:bg-indigo-700 active:scale-95 text-xl font-bold py-2.5 rounded-xl transition shadow">0</button>
+<button onclick="checkCode()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-xs font-bold py-2.5 rounded-xl transition shadow text-white">ส่งรหัส</button>
+</div>
+
+<!-- Status Message -->
+<div id="message" class="text-xs md:text-sm font-semibold h-6 text-amber-300">
+ป้อนคำตอบแล้วกดส่งรหัส
+</div>
+</div>
+</section>
+
+</main>
+
+<!-- Modal Final Success -->
+<div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+<div class="bg-indigo-900 border-4 border-amber-400 rounded-3xl p-8 max-w-md text-center shadow-2xl">
+<div id="badge-icon" class="text-6xl mb-4">🏆</div>
+<h2 class="text-3xl font-bold text-amber-400 mb-2">พิชิตวิหารสำเร็จ!</h2>
+<p class="text-gray-200 mb-2">คุณผ่านการถอดรหัสครบทั้ง 10 ด่านเรียบร้อยแล้ว</p>
+<div class="bg-indigo-950 p-4 rounded-xl border border-amber-500/30 mb-6">
+  <p class="text-sm text-gray-300">คะแนนรวมที่ทำได้</p>
+  <p id="final-score" class="text-4xl font-extrabold text-emerald-400 my-1">0 / 10</p>
+  <p id="final-eval" class="text-xs text-amber-300">สุดยอดนักสำรวจคณิตศาสตร์!</p>
+</div>
+<div id="sdk-save-status" class="text-xs text-gray-300 mb-3"></div>
+<button onclick="restartCurrentGame()" class="bg-amber-500 hover:bg-amber-400 text-indigo-950 font-bold px-6 py-3 rounded-xl text-lg shadow-lg transition w-full mb-2">
+เล่นอีกครั้ง
+</button>
+<button onclick="goHome()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-6 py-3 rounded-xl text-lg shadow-lg transition w-full">
+ปิดเกม (กลับหน้าหลัก)
+</button>
+</div>
+</div>
+
+<!-- Footer -->
+<footer class="text-center text-xs text-indigo-300/60 my-2">
+สื่อการเรียนรู้คณิตศาสตร์ เรื่อง แบบรูปและความสัมพันธ์ ชั้นประถมศึกษาปีที่ 6 (10 ภารกิจ)
+</footer>
+
+<!-- Logic Script -->
+<script>
+// รายการโจทย์ 10 ข้อ
+const PUZZLES = [
+  {
+    id: 1,
+    concept: "การเพิ่มขึ้นแบบคงที่ (การบวก):",
+    sequence: "12, 19, 26, 33, 40, [ ? ]",
+    code: "47",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ลองดูผลต่างระหว่างตัวเลข: เพิ่มขึ้นทีละ 7 เท่าๆ กัน (40 + 7 = ?)"
+  },
+  {
+    id: 2,
+    concept: "การเพิ่มขึ้นแบบทวีคูณ (การคูณ):",
+    sequence: "3, 6, 12, 24, 48, [ ? ]",
+    code: "96",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ตัวเลขถัดไปเกิดจากการคูณด้วย 2 (48 × 2 = ?)"
+  },
+  {
+    id: 3,
+    concept: "แบบรูปการบวกสะสม:",
+    sequence: "2, 3, 5, 8, 12, 17, [ ? ]",
+    code: "23",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ผลต่างเพิ่มขึ้นทีละ 1: (+1), (+2), (+3), (+4), (+5), ดังนั้นตัวถัดไปคือ (+6) -> (17 + 6 = ?)"
+  },
+  {
+    id: 4,
+    concept: "ความสัมพันธ์เชิงเส้น (แทนค่า n):",
+    sequence: "สูตรความสัมพันธ์คือ 4n - 3 | ถ้า n = 6 ค่าที่ได้คือเท่าไร?",
+    code: "21",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "แทนค่า n = 6 ลงในสูตร: (4 × 6) - 3 = 24 - 3 = ?"
+  },
+  {
+    id: 5,
+    concept: "อนุกรมกำลังสอง (เลขยกระดับ):",
+    sequence: "1, 4, 9, 16, 25, 36, [ ? ]",
+    code: "49",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "เกิดจากจำนวนนับคูณตัวมันเอง: 1×1, 2×2, ..., 6×6, 7×7 = ?"
+  },
+  {
+    id: 6,
+    concept: "การลดลงแบบคงที่ (การลบ):",
+    sequence: "100, 88, 76, 64, 52, [ ? ]",
+    code: "40",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ตัวเลขลดลงทีละ 12 เท่าๆ กัน (52 - 12 = ?)"
+  },
+  {
+    id: 7,
+    concept: "การลดลงแบบหาร (ทวีคูณ):",
+    sequence: "160, 80, 40, 20, [ ? ]",
+    code: "10",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ตัวเลขลดลงโดยการหารด้วย 2 (20 ÷ 2 = ?)"
+  },
+  {
+    id: 8,
+    concept: "แบบรูปสลับบวกลบ:",
+    sequence: "5, 10, 8, 13, 11, 16, [ ? ]",
+    code: "14",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ลองดูรูปแบบ: (+5), (-2), (+5), (-2), (+5), ตัวถัดไปต้อง (-2) -> (16 - 2 = ?)"
+  },
+  {
+    id: 9,
+    concept: "ความสัมพันธ์เชิงเส้นแบบวงเล็บ:",
+    sequence: "สูตรความสัมพันธ์คือ 5(n + 2) | ถ้า n = 4 ค่าที่ได้คือเท่าไร?",
+    code: "30",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "บวกในวงเล็บก่อน: (4 + 2) = 6 จากนั้นคูณด้วย 5 -> (5 × 6 = ?)"
+  },
+  {
+    id: 10,
+    concept: "อนุกรมฟีโบนักชี (Fibonacci):",
+    sequence: "1, 1, 2, 3, 5, 8, 13, [ ? ]",
+    code: "21",
+    digits: 2,
+    instruction: "*ใส่คำตอบเป็นรหัส 2 หลัก",
+    hint: "ตัวเลขเกิดจากการเอา 2 ตัวหน้ามาบวกกัน: 5+8=13, ตัวถัดไปคือ (8 + 13 = ?)"
+  }
+];
+
+let currentLevel = 0;
+let score = 0;
+let currentInput = "";
+let isFirstAttempt = true; // ตรวจสอบว่าตอบครั้งแรกในด่านนั้นหรือไม่
+
+function initLevel() {
+  const p = PUZZLES[currentLevel];
+  document.getElementById('level-display').textContent = `${p.id} / ${PUZZLES.length}`;
+  document.getElementById('puzzle-title').textContent = `รหัสภารกิจที่ ${p.id}`;
+  document.getElementById('puzzle-concept').textContent = p.concept;
+  document.getElementById('puzzle-sequence').textContent = p.sequence;
+  document.getElementById('puzzle-instruction').textContent = p.instruction;
+  document.getElementById('hint-box').textContent = p.hint;
+  document.getElementById('hint-box').classList.add('hidden');
+  
+  // Reset Keypad Slots
+  const screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  for(let i=0; i<p.digits; i++) {
+    screen.innerHTML += `<span class="slot border-b-4 border-emerald-500 w-8 text-center">-</span>`;
+  }
+  
+  clearCode();
+  isFirstAttempt = true;
+}
+
+function updateScreen() {
+  const slots = document.querySelectorAll('.slot');
+  const maxDigits = PUZZLES[currentLevel].digits;
+  for (let i = 0; i < maxDigits; i++) {
+    if (i < currentInput.length) {
+      slots[i].textContent = currentInput[i];
+      slots[i].classList.add('text-amber-400');
+    } else {
+      slots[i].textContent = "-";
+      slots[i].classList.remove('text-amber-400');
+    }
+  }
+}
+
+function pressNum(num) {
+  const maxDigits = PUZZLES[currentLevel].digits;
+  if (currentInput.length < maxDigits) {
+    currentInput += num;
+    updateScreen();
+  }
+}
+
+function clearCode() {
+  currentInput = "";
+  updateScreen();
+  document.getElementById('message').textContent = "ป้อนคำตอบแล้วกดส่งรหัส";
+  document.getElementById('message').className = "text-xs md:text-sm font-semibold h-6 text-amber-300";
+}
+
+function checkCode() {
+  const msg = document.getElementById('message');
+  const keypad = document.getElementById('keypad-card');
+  const p = PUZZLES[currentLevel];
+
+  if (currentInput.length < p.digits) {
+    msg.textContent = `⚠️ กรุณากรอกรหัสให้ครบ ${p.digits} หลัก`;
+    msg.className = "text-xs md:text-sm font-semibold h-6 text-rose-400";
+    return;
+  }
+
+  if (currentInput === p.code) {
+    // ถูกต้อง
+    if (isFirstAttempt) {
+      score++;
+      document.getElementById('score-display').textContent = `${score} คะแนน`;
+    }
+
+    msg.textContent = "🎉 ถอดรหัสถูกต้อง!";
+    msg.className = "text-xs md:text-sm font-semibold h-6 text-emerald-400";
+
+    // Confetti Effect
+    if (typeof confetti === 'function') {
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    }
+
+    setTimeout(() => {
+      if (currentLevel + 1 < PUZZLES.length) {
+        currentLevel++;
+        initLevel();
+      } else {
+        showFinalModal();
+      }
+    }, 1000);
+
+  } else {
+    // ผิด
+    isFirstAttempt = false; // เสียสิทธิ์ได้คะแนนในด่านนี้
+    msg.textContent = "❌ รหัสไม่ถูกต้อง ลองคิดคำนวณใหม่อีกครั้ง!";
+    msg.className = "text-xs md:text-sm font-semibold h-6 text-rose-400";
+
+    // Shake Animation
+    keypad.classList.add('shake');
+    setTimeout(() => {
+      keypad.classList.remove('shake');
+    }, 500);
+  }
+}
+
+function toggleHint() {
+  const hint = document.getElementById('hint-box');
+  hint.classList.toggle('hidden');
+}
+
+function showFinalModal() {
+  sdkSubmitScore(score, PUZZLES.length);
+  document.getElementById('final-score').textContent = `${score} / 10`;
+  const badgeIcon = document.getElementById('badge-icon');
+  const finalEval = document.getElementById('final-eval');
+
+  if (score === 10) {
+    badgeIcon.textContent = "🏆";
+    finalEval.textContent = "อัจฉริยะคณิตศาสตร์! ถอดรหัสได้เพอร์เฟกต์ 100%";
+  } else if (score >= 7) {
+    badgeIcon.textContent = "🥇";
+    finalEval.textContent = "ยอดเยี่ยมมาก! คุณมีความเข้าใจเรื่องแบบรูปเป็นอย่างดี";
+  } else if (score >= 5) {
+    badgeIcon.textContent = "🥈";
+    finalEval.textContent = "ผ่านเกณฑ์! ลองฝึกฝนเพิ่มเติมอีกนิดเพื่อความเป็นเลิศ";
+  } else {
+    badgeIcon.textContent = "🥉";
+    finalEval.textContent = "พยายามได้ดี! ลองกลับมาทบทวนคำใบ้และเล่นอีกครั้งนะ";
+  }
+
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function beginGame() {
+  __sdkStartTime = Date.now();
+  currentLevel = 0;
+  score = 0;
+  document.getElementById('score-display').textContent = "0 คะแนน";
+  document.getElementById('screen-start').classList.add('hidden');
+  document.getElementById('game-header').classList.remove('hidden');
+  document.getElementById('game-scorebar').classList.remove('hidden');
+  document.getElementById('game-main').classList.remove('hidden');
+  document.getElementById('modal').classList.add('hidden');
+  initLevel();
+}
+
+/* ===================== MathGame SDK Integration ===================== */
+const GAME_ID = 'game4';
+let __sdkStartTime = null;
+
+function getElapsedSeconds() {
+  return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+}
+
+async function refreshStartButton() {
+  const btn = document.getElementById('sdk-start-btn');
+  const banner = document.getElementById('sdk-start-banner');
+  if (!window.MathGameSDK || !btn || !banner) return;
+  try {
+    const status = await MathGameSDK.getGameStatus(GAME_ID);
+    if (!status.played) {
+      btn.disabled = false;
+      banner.classList.add('hidden');
+    } else if (status.hearts === null || status.hearts > 0) {
+      btn.disabled = false;
+      banner.classList.remove('hidden');
+      banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+    } else {
+      btn.disabled = true;
+      banner.classList.remove('hidden');
+      banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+    }
+  } catch (e) {}
+}
+
+async function sdkSubmitScore(finalScore, totalQuestions) {
+  const statusEl = document.getElementById('sdk-save-status');
+  const elapsed = getElapsedSeconds();
+  if (window.MathGameSDK) {
+    try {
+      const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+      if (statusEl) {
+        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+    }
+  }
+  await refreshStartButton();
+}
+
+function restartCurrentGame() {
+  beginGame();
+}
+
+function goHome() {
+  window.location.href = document.referrer || '../index.html';
+}
+
+window.addEventListener('load', async function () {
+  const playerBox = document.getElementById('sdk-player-box');
+  if (window.MathGameSDK && playerBox) {
+    const player = MathGameSDK.getPlayer();
+    if (player && player.name) {
+      playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+    } else {
+      playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+    }
+  }
+  await refreshStartButton();
+});
+</script>
+</body>
+</html>

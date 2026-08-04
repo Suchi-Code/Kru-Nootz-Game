@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraction Bakery: ร้านเบเกอรี่เศษส่วนหรรษา (ป.6 Challenge) 🍰🍕</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts: Kanit & Itim -->
+    <link href="https://fonts.googleapis.com/css2?family=Itim&family=Kanit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #fdf2f8 0%, #fff7ed 50%, #f0fdf4 100%);
+        }
+        .font-itim {
+            font-family: 'Itim', cursive;
+        }
+        .btn-option {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-option:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .btn-option:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 1; }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+        .fraction-view {
+            display: inline-flex;
+            flex-direction: column;
+            vertical-align: middle;
+            text-align: center;
+            padding: 0 4px;
+        }
+        .fraction-num { border-bottom: 2px solid currentColor; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-3 md:p-6 text-slate-800">
+
+    <!-- Header -->
+    <header class="text-center max-w-2xl mx-auto w-full mb-3">
+        <div class="inline-block bg-amber-100 text-amber-800 px-4 py-1 rounded-full text-xs md:text-sm font-bold mb-1 shadow-sm">
+            👨‍🍳 ร้านเบเกอรี่เวทมนตร์ของคุณหมี (ระดับ ป.6 Challenge)
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-pink-500 drop-shadow-sm font-itim flex items-center justify-center gap-2">
+            🍰 Fraction Bakery 🍕
+        </h1>
+        <p class="text-slate-500 text-xs md:text-sm font-semibold">
+            "ท้าทายเชฟรุ่นใหญ่ แก้โจทย์เศษส่วนระดับเซียน!"
+        </p>
+    </header>
+
+    <!-- Game Screen Container -->
+    <main class="max-w-2xl mx-auto w-full bg-white/95 backdrop-blur-md rounded-3xl p-4 md:p-6 shadow-xl border-4 border-pink-200 my-auto relative overflow-hidden">
+        
+        <!-- Screen 1: Start Screen -->
+        <div id="start-screen" class="text-center py-6 space-y-5">
+            <div class="text-7xl bounce-in">🐻‍❄️🎓</div>
+            <div class="space-y-2">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-700 font-itim">พร้อมรับการทดสอบระดับ ป.6 หรือยัง?</h2>
+                <p class="text-slate-500 text-sm max-w-md mx-auto">
+                    โจทย์การวิเคราะห์เศษส่วน ค.ร.น. เศษส่วนอย่างต่ำ และโจทย์ปัญหาประยุกต์ 10 ข้อสุดท้าทาย!
+                </p>
+            </div>
+
+            <div class="bg-amber-50 rounded-2xl p-4 max-w-sm mx-auto text-left border border-amber-200 text-xs space-y-1.5 text-amber-900">
+                <p class="font-bold border-b border-amber-200 pb-1">🎯 ภารกิจ MASTER CHEF:</p>
+                <p>• เศษส่วนอย่างต่ำ & จำนวนคละ (3 ข้อ)</p>
+                <p>• เปรียบเทียบเศษส่วนที่ตัวส่วนไม่เท่ากัน (3 ข้อ)</p>
+                <p>• โจทย์ปัญหาและเศษส่วนของจำนวนนับ (4 ข้อ)</p>
+            </div>
+
+            <div id="sdk-player-box" class="text-sm text-pink-600"></div>
+            <div id="sdk-start-banner" class="hidden bg-amber-50 border-2 border-amber-300 rounded-xl p-3 text-sm text-amber-800 max-w-md mx-auto"></div>
+
+            <button id="sdk-start-btn" onclick="startGame()" class="bg-pink-500 hover:bg-pink-400 active:scale-95 text-white font-extrabold py-3.5 px-8 rounded-2xl shadow-lg transition text-xl font-itim border-b-4 border-pink-700">
+                🚀 ลุยโจทย์ท้าทายเลย!
+            </button>
+        </div>
+
+        <!-- Screen 2: Gameplay -->
+        <div id="game-screen" class="hidden space-y-4">
+            
+            <!-- Top Bar: Progress, Toppings & Score -->
+            <div class="flex justify-between items-center bg-pink-50 p-3 rounded-2xl border border-pink-100">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-pink-700 font-bold text-xs md:text-sm">ข้อที่:</span>
+                    <span id="question-count" class="bg-pink-500 text-white font-extrabold px-3 py-0.5 rounded-full text-xs md:text-sm">1 / 10</span>
+                </div>
+                <!-- Toppings Counter -->
+                <div class="flex items-center gap-1 bg-white px-3 py-1 rounded-full border border-amber-200 shadow-sm">
+                    <span class="text-xs">🍓/🍫</span>
+                    <span id="topping-count" class="text-amber-600 font-extrabold text-xs md:text-sm">0</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-amber-600 font-bold text-xs md:text-sm">คะแนน:</span>
+                    <span id="score-count" class="bg-amber-400 text-white font-extrabold px-3 py-0.5 rounded-full text-xs md:text-sm">0</span>
+                </div>
+            </div>
+
+            <!-- Question Card Area -->
+            <div class="bg-slate-50 border-2 border-dashed border-pink-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-4 min-h-[200px]">
+                
+                <!-- Category Badge -->
+                <span id="category-badge" class="bg-sky-100 text-sky-700 border border-sky-300 px-3 py-0.5 rounded-full text-xs font-bold">
+                    หมวดหมู่
+                </span>
+
+                <!-- Visual / Graphic Text Area -->
+                <div id="visual-container" class="flex justify-center items-center w-full">
+                    <div id="custom-graphic" class="text-center font-bold text-slate-700 text-base md:text-lg bg-white px-4 py-2 rounded-xl border border-pink-100 shadow-sm"></div>
+                </div>
+
+                <!-- Question Text -->
+                <h3 id="question-text" class="text-base md:text-lg font-bold text-center text-slate-800 leading-relaxed">
+                    คำถามจะแสดงที่นี่
+                </h3>
+            </div>
+
+            <!-- Options Grid -->
+            <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                <!-- Dynamic Options -->
+            </div>
+
+            <!-- Feedback Message & Next Button -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3 min-h-[48px] pt-1">
+                <div id="feedback-msg" class="text-sm font-bold text-center md:text-left min-h-[20px]"></div>
+                <button id="btn-next" onclick="nextQuestion()" class="hidden w-full md:w-auto bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-900 font-extrabold px-6 py-2.5 rounded-2xl shadow-md transition text-base font-itim border-b-4 border-amber-500">
+                    ข้อถัดไป ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen 3: Summary Screen -->
+        <div id="summary-screen" class="hidden text-center py-4 space-y-5">
+            <div id="final-badge" class="text-6xl bounce-in">🏆</div>
+            
+            <div>
+                <div id="star-rating" class="text-3xl my-1">⭐⭐⭐</div>
+                <h2 id="eval-title" class="text-2xl font-extrabold text-slate-800 font-itim">สรุปผลการทำเบเกอรี่</h2>
+                <p id="eval-text" class="text-sm text-pink-600 font-semibold mt-1">เก่งมาก!</p>
+            </div>
+
+            <!-- Score & Badges Summary -->
+            <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto">
+                <div class="bg-pink-50 border border-pink-200 rounded-2xl p-3">
+                    <p class="text-xs text-slate-500 font-semibold">คะแนนรวม</p>
+                    <p id="final-score" class="text-3xl font-black text-pink-500 my-0.5">10/10</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3">
+                    <p class="text-xs text-slate-500 font-semibold">ท็อปปิ้งที่ได้</p>
+                    <p id="final-toppings" class="text-3xl font-black text-amber-500 my-0.5">10 ชิ้น</p>
+                </div>
+            </div>
+
+            <!-- Special Bakery Decoration Display -->
+            <div class="bg-amber-100/60 border border-amber-300 rounded-2xl p-4 max-w-md mx-auto text-center space-y-2">
+                <p class="text-xs font-bold text-amber-800">🎂 เค้กพิเศษระดับ Master Chef ของคุณหมี!</p>
+                <div id="cake-decoration" class="text-4xl tracking-widest">
+                    🎂✨🍓🍫🍓🍫
+                </div>
+                <div id="badge-unlocked" class="text-xs font-bold text-emerald-600 bg-emerald-50 py-1 px-3 rounded-full border border-emerald-200 inline-block">
+                    🏅ปลดล็อกเหรียญตรา: ปานเทพเศษส่วน!
+                </div>
+            </div>
+
+            <div id="sdk-save-status" class="text-xs text-slate-500"></div>
+
+            <button onclick="restartCurrentGame()" class="w-full max-w-xs bg-pink-500 hover:bg-pink-400 active:scale-95 text-white font-extrabold py-3 px-6 rounded-2xl shadow-lg transition text-lg font-itim border-b-4 border-pink-700">
+                🔄 เล่นอีกครั้ง
+            </button>
+            <button onclick="goHome()" class="w-full max-w-xs bg-slate-500 hover:bg-slate-400 active:scale-95 text-white font-extrabold py-3 px-6 rounded-2xl shadow-lg transition text-lg font-itim border-b-4 border-slate-700">
+                🏠 ปิดเกม (กลับหน้าหลัก)
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-400 my-2">
+        สื่อการเรียนรู้คณิตศาสตร์ ชั้นประถมศึกษาปีที่ 6 • เรื่อง เศษส่วนและการประยุกต์
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        // 10 Grade 6 Level Question Dataset
+        const questionBank = [
+            // Category 1: Simplified Fractions & Mixed Numbers (3 Questions)
+            {
+                category: "หมวดที่ 1: เศษส่วนอย่างต่ำและจำนวนคละ",
+                customGraphic: "🍰 เค้กชาไทย 18 ชิ้น จากทั้งหมด 24 ชิ้น",
+                text: "ร้านคุณหมีอบเค้กชาไทย 24 ชิ้น ขายไปได้ 18 ชิ้น ขนมที่ขายไปคิดเป็น <strong>'เศษส่วนอย่างต่ำ'</strong> เท่าใดของเค้กทั้งหมด?",
+                options: ["18/24", "3/4", "6/8", "2/3"],
+                answer: "3/4",
+                hint: "นำ ห.ร.ม. คือ 6 มาหารทั้งตัวเศษและตัวส่วน: (18÷6)/(24÷6) = 3/4"
+            },
+            {
+                category: "หมวดที่ 1: เศษส่วนอย่างต่ำและจำนวนคละ",
+                customGraphic: "🥐 แปลงเศษเกิน 29/6 เป็นจำนวนคละ",
+                text: "คุณหมีตัดขนมครัวซองต์ได้ <sup>29</sup>&frasl;<sub>6</sub> ถาด เขียนในรูป <strong>จำนวนคละ</strong> ได้ตรงกับข้อใด?",
+                options: ["4 5/6", "4 1/6", "5 1/6", "3 5/6"],
+                answer: "4 5/6",
+                hint: "นำ 29 ÷ 6 ได้ 4 เหลือเศษ 5 ดังนั้นจะได้ 4 5/6"
+            },
+            {
+                category: "หมวดที่ 2: เศษส่วนอย่างต่ำและจำนวนคละ",
+                customGraphic: "🍕 เปลี่ยนจำนวนคละ 3 5/8 เป็นเศษเกิน",
+                text: "พิซซ่าหน้าชีสมีอยู่ 3 <sup>5</sup>&frasl;<sub>8</sub> ถาด เขียนในรูป <strong>เศษเกิน</strong> ได้ตรงกับข้อใด?",
+                options: ["29/8", "24/8", "15/8", "31/8"],
+                answer: "29/8",
+                hint: "นำ (ตัวหน้า × ตัวส่วน) + ตัวเศษ = (3 × 8) + 5 = 29 จึงได้ 29/8"
+            },
+
+            // Category 2: Comparing Fractions with Different Denominators (3 Questions)
+            {
+                category: "หมวดที่ 2: เปรียบเทียบเศษส่วน (ตัวส่วนไม่เท่ากัน)",
+                customGraphic: "🥧 พายสตรอว์เบอร์รี <sup>3</sup>&frasl;<sub>4</sub> ถาด &nbsp; 🆚 &nbsp; พายบลูเบอร์รี <sup>5</sup>&frasl;<sub>6</sub> ถาด",
+                text: "เติมเครื่องหมายเปรียบเทียบลงในช่องว่าง: <sup>3</sup>&frasl;<sub>4</sub> &nbsp; [ &nbsp; ] &nbsp; <sup>5</sup>&frasl;<sub>6</sub>",
+                options: [">", "<", "="],
+                answer: "<",
+                hint: "ทำตัวส่วนให้เท่ากัน (ค.ร.น. คือ 12): 3/4 = 9/12 และ 5/6 = 10/12 ดังนั้น 9/12 < 10/12"
+            },
+            {
+                category: "หมวดที่ 2: เปรียบเทียบเศษส่วน (ตัวส่วนไม่เท่ากัน)",
+                customGraphic: "🍯 น้ำเชื่อม A: <sup>7</sup>&frasl;<sub>10</sub> ลิตร &nbsp;|&nbsp; น้ำเชื่อม B: <sup>11</sup>&frasl;<sub>15</sub> ลิตร",
+                text: "คุณหมีมีน้ำเชื่อมสูตร A อยู่ <sup>7</sup>&frasl;<sub>10</sub> ลิตร และสูตร B อยู่ <sup>11</sup>&frasl;<sub>15</sub> ลิตร น้ำเชื่อมสูตรใดมีปริมาณมากกว่ากัน?",
+                options: ["สูตร A มากกว่า", "สูตร B มากกว่า", "ทั้งสองสูตรเท่ากัน"],
+                answer: "สูตร B มากกว่า",
+                hint: "ค.ร.น. ของ 10 และ 15 คือ 30: สูตร A = 21/30 ลิตร, สูตร B = 22/30 ลิตร (B มากกว่า)"
+            },
+            {
+                category: "หมวดที่ 2: เปรียบเทียบเศษส่วน (ตัวส่วนไม่เท่ากัน)",
+                customGraphic: "📊 เรียงลำดับจาก 'น้อยไปมาก': <sup>1</sup>&frasl;<sub>2</sub>, &nbsp; <sup>2</sup>&frasl;<sub>5</sub>, &nbsp; <sup>3</sup>&frasl;<sub>10</sub>",
+                text: "ข้อใดเรียงลำดับปริมาณแป้งขนมปังจาก <strong>'น้อยไปมาก'</strong> ได้ถูกต้อง?",
+                options: [
+                    "3/10, 2/5, 1/2",
+                    "1/2, 2/5, 3/10",
+                    "2/5, 3/10, 1/2",
+                    "3/10, 1/2, 2/5"
+                ],
+                answer: "3/10, 2/5, 1/2",
+                hint: "แปลงตัวส่วนเป็น 10 ทั้งหมด: 1/2 = 5/10, 2/5 = 4/10, 3/10 = 3/10 ➔ เรียงได้ 3/10 < 4/10 < 5/10"
+            },
+
+            // Category 3: Applied Word Problems & Fractions of Quantities (4 Questions)
+            {
+                category: "หมวดที่ 3: โจทย์ปัญหาเศษส่วนประยุกต์",
+                customGraphic: "🥛 นมสด 40 ลิตร ใช้ไป <sup>3</sup>&frasl;<sub>5</sub> ของที่มีอยู่",
+                text: "คุณหมีมีนมสด 40 ลิตร นำไปทำเค้กนมสด <sup>3</sup>&frasl;<sub>5</sub> ของนมสดที่มีอยู่ คุณหมีใช้นมสดไปกี่ลิตร?",
+                options: ["24 ลิตร", "15 ลิตร", "16 ลิตร", "20 ลิตร"],
+                answer: "24 ลิตร",
+                hint: "ใช้นมสดไป = (3/5) × 40 = 24 ลิตร"
+            },
+            {
+                category: "หมวดที่ 3: โจทย์ปัญหาเศษส่วนประยุกต์",
+                customGraphic: "🍓 สตรอว์เบอร์รี 60 ลูก เหลืออยู่ <sup>1</sup>&frasl;<sub>4</sub>",
+                text: "ร้านเบเกอรี่มีสตรอว์เบอร์รี 60 ลูก นำไปแต่งหน้าเค้กจนเหลือสตรอว์เบอร์รีเพียง <sup>1</sup>&frasl;<sub>4</sub> ของทั้งหมด อยากทราบว่านำไปแต่งหน้าเค้กไปกี่ลูก?",
+                options: ["15 ลูก", "45 ลูก", "30 ลูก", "50 ลูก"],
+                answer: "45 ลูก",
+                hint: "เหลือ 1/4 แสดงว่าใช้ไป 3/4 ➔ (3/4) × 60 = 45 ลูก"
+            },
+            {
+                category: "หมวดที่ 3: โจทย์ปัญหาเศษส่วนประยุกต์",
+                customGraphic: "🧈 เนยสด: กุ้งมี <sup>5</sup>&frasl;<sub>6</sub> กก. &nbsp;|&nbsp; มะลิมีมากกว่ากุ้ง <sup>1</sup>&frasl;<sub>4</sub> กก.",
+                text: "กุ้งมีเนยสด <sup>5</sup>&frasl;<sub>6</sub> กิโลกรัม มะลิมีเนยสดมากกว่ากุ้ง <sup>1</sup>&frasl;<sub>4</sub> กิโลกรัม มะลิมีเนยสดกี่กิโลกรัม?",
+                options: ["1 1/12 กก.", "6/10 กก.", "1 1/6 กก.", "11/12 กก."],
+                answer: "1 1/12 กก.",
+                hint: "5/6 + 1/4 = 10/12 + 3/12 = 13/12 = 1 1/12 กิโลกรัม"
+            },
+            {
+                category: "หมวดที่ 3: โจทย์ปัญหาเศษส่วนประยุกต์",
+                customGraphic: "🍫 ช็อกโกแลต 2 <sup>1</sup>&frasl;<sub>2</sub> กก. แบ่งใส่ถุง ถุงละ <sup>1</sup>&frasl;<sub>4</sub> กก.",
+                text: "คุณหมีมีช็อกโกแลต 2 <sup>1</sup>&frasl;<sub>2</sub> กิโลกรัม นำมาแบ่งใส่ถุง ถุงละ <sup>1</sup>&frasl;<sub>4</sub> กิโลกรัม จะแบ่งได้ทั้งหมดกี่ถุง?",
+                options: ["8 ถุง", "10 ถุง", "12 ถุง", "6 ถุง"],
+                answer: "10 ถุง",
+                hint: "แปลง 2 1/2 = 5/2 แล้วนำไปหาร: (5/2) ÷ (1/4) = (5/2) × 4 = 10 ถุง"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let toppings = 0;
+        let isAnswered = false;
+
+        function formatFractionText(str) {
+            return str.replace(/(\d+)\/(\d+)/g, '<span class="fraction-view"><span class="fraction-num">$1</span><span>$2</span></span>');
+        }
+
+        function startGame() {
+            __sdkStartTime = Date.now();
+            currentQuestionIndex = 0;
+            score = 0;
+            toppings = 0;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('summary-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            const q = questionBank[currentQuestionIndex];
+
+            // Counters
+            document.getElementById('question-count').textContent = `${currentQuestionIndex + 1} / 10`;
+            document.getElementById('score-count').textContent = score;
+            document.getElementById('topping-count').textContent = toppings;
+
+            // Category Badge
+            document.getElementById('category-badge').textContent = q.category;
+
+            // Question Text & Graphic
+            document.getElementById('question-text').innerHTML = q.text;
+            document.getElementById('custom-graphic').innerHTML = q.customGraphic;
+
+            // Reset Feedback
+            document.getElementById('feedback-msg').textContent = '';
+            document.getElementById('btn-next').classList.add('hidden');
+
+            // Render Options
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = '';
+
+            q.options.forEach((optText) => {
+                const btn = document.createElement('button');
+                btn.className = "btn-option w-full bg-white hover:bg-pink-50 border-2 border-pink-200 text-slate-700 font-bold p-3.5 rounded-2xl text-base md:text-lg text-center shadow-sm flex items-center justify-center min-h-[58px]";
+                btn.innerHTML = formatFractionText(optText);
+                btn.onclick = () => selectOption(btn, optText, q.answer, q.hint);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function selectOption(selectedBtn, selectedText, correctText, hintText) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const allButtons = document.querySelectorAll('#options-grid button');
+            const feedbackMsg = document.getElementById('feedback-msg');
+
+            allButtons.forEach(btn => btn.disabled = true);
+
+            if (selectedText === correctText) {
+                score++;
+                toppings += 1;
+                document.getElementById('score-count').textContent = score;
+                document.getElementById('topping-count').textContent = toppings;
+
+                selectedBtn.className = "btn-option w-full bg-emerald-500 text-white font-extrabold p-3.5 rounded-2xl text-base md:text-lg text-center shadow-md flex items-center justify-center min-h-[58px] border-2 border-emerald-600 bounce-in";
+                selectedBtn.innerHTML = `✅ ${formatFractionText(selectedText)}`;
+
+                feedbackMsg.className = "text-sm font-bold text-emerald-600 text-center md:text-left bounce-in";
+                feedbackMsg.textContent = "ปิ้ง! ✨ ถูกต้องแม่นยำ! รับท็อปปิ้งพรีเมียม 1 ชิ้น 🍓";
+
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
+                }
+            } else {
+                selectedBtn.className = "btn-option w-full bg-rose-500 text-white font-extrabold p-3.5 rounded-2xl text-base md:text-lg text-center shadow-md flex items-center justify-center min-h-[58px] border-2 border-rose-600 shake";
+                selectedBtn.innerHTML = `❌ ${formatFractionText(selectedText)}`;
+
+                // Highlight correct button
+                allButtons.forEach(btn => {
+                    const rawText = btn.innerText.replace('✅ ', '').replace('❌ ', '').trim();
+                    if (rawText === correctText || btn.innerHTML.includes(correctText)) {
+                        btn.className = "btn-option w-full bg-emerald-100 border-2 border-emerald-500 text-emerald-800 font-extrabold p-3.5 rounded-2xl text-base md:text-lg text-center shadow-sm flex items-center justify-center min-h-[58px]";
+                    }
+                });
+
+                feedbackMsg.className = "text-xs md:text-sm font-bold text-rose-500 text-center md:text-left bounce-in";
+                feedbackMsg.textContent = `โอ๊ะโอ่~ 🥐 แนวคิด: ${hintText}`;
+            }
+
+            document.getElementById('btn-next').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex + 1 < questionBank.length) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            sdkSubmitScore(score, 10);
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('summary-screen').classList.remove('hidden');
+
+            document.getElementById('final-score').textContent = `${score}/10`;
+            document.getElementById('final-toppings').textContent = `${toppings} ชิ้น`;
+
+            const starRating = document.getElementById('star-rating');
+            const evalTitle = document.getElementById('eval-title');
+            const evalText = document.getElementById('eval-text');
+            const badgeUnlocked = document.getElementById('badge-unlocked');
+
+            // Build Cake Decoration Visual
+            let cakeVisual = "🎂✨";
+            for (let i = 0; i < toppings; i++) {
+                cakeVisual += (i % 2 === 0) ? "🍓" : "🍫";
+            }
+            if (toppings === 0) cakeVisual = "🎂 (ไม่มีท็อปปิ้ง)";
+            document.getElementById('cake-decoration').textContent = cakeVisual;
+
+            // Badges
+            let badges = [];
+            if (score === 10) badges.push("⚡ ปานเทพเศษส่วน ป.6 (10/10)");
+            else if (score >= 8) badges.push("🏅 เซียนคณิตศาสตร์เบเกอรี่");
+            else badges.push("👨‍🍳 เชฟฝึกหัดระดับสูง");
+            badgeUnlocked.textContent = badges.join(" | ");
+
+            // Stars Evaluation
+            if (score >= 9) {
+                starRating.textContent = "⭐⭐⭐";
+                evalTitle.textContent = "Master Chef ระดับทองคำ!";
+                evalText.textContent = "อัจฉริยะมากๆ! สามารถแก้โจทย์เศษส่วนระดับ ป.6 ได้อย่างสมบูรณ์แบบ!";
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                }
+            } else if (score >= 6) {
+                starRating.textContent = "⭐⭐";
+                evalTitle.textContent = "Master Chef มืออาชีพ!";
+                evalText.textContent = "เก่งมากเลยครับ! ผ่านการทดสอบโจทย์เศษส่วน ป.6 ได้ยอดเยี่ยม";
+            } else {
+                starRating.textContent = "⭐";
+                evalTitle.textContent = "เชฟเบเกอรี่ฝึกหัด!";
+                evalText.textContent = "โจทย์ ป.6 ท้าทายใช่ไหมล่ะ? ลองฝึกคำนวณ ค.ร.น. แล้วกลับมาสู้ใหม่อีกทีนะ!";
+            }
+        }
+    
+
+        /* ===================== MathGame SDK Integration ===================== */
+        const GAME_ID = 'game20';
+        let __sdkStartTime = null;
+
+        function getElapsedSeconds() {
+            return __sdkStartTime ? Math.round((Date.now() - __sdkStartTime) / 1000) : 0;
+        }
+
+        async function refreshStartButton() {
+            const btn = document.getElementById('sdk-start-btn');
+            const banner = document.getElementById('sdk-start-banner');
+            if (!window.MathGameSDK || !btn || !banner) return;
+            try {
+                const status = await MathGameSDK.getGameStatus(GAME_ID);
+                if (!status.played) {
+                    btn.disabled = false;
+                    banner.classList.add('hidden');
+                } else if (status.hearts === null || status.hearts > 0) {
+                    btn.disabled = false;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'คุณเล่นเกมนี้ไปแล้ว! ถ้าเล่นซ้ำแล้วทำคะแนนดีขึ้น จะเสีย 1 หัวใจ (เหลือ ' + status.hearts + ' ดวง)';
+                } else {
+                    btn.disabled = true;
+                    banner.classList.remove('hidden');
+                    banner.textContent = 'เล่นเกมนี้ไปแล้ว และใช้หัวใจครบ 3 ดวงแล้ว เล่นซ้ำเพื่อทำคะแนนใหม่ไม่ได้อีกแล้วนะ';
+                }
+            } catch (e) {}
+        }
+
+        async function sdkSubmitScore(finalScore, totalQuestions) {
+            const statusEl = document.getElementById('sdk-save-status');
+            const elapsed = getElapsedSeconds();
+            if (window.MathGameSDK) {
+                try {
+                    const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+                    if (statusEl) {
+                        if (res.saved) statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                        else if (res.reason === 'not-better') statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                        else if (res.reason === 'no-hearts') statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                        else if (res.reason === 'no-player') statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                        else statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            }
+            await refreshStartButton();
+        }
+
+        function restartCurrentGame() {
+            startGame();
+        }
+
+        function goHome() {
+            window.location.href = document.referrer || '../index.html';
+        }
+
+        window.addEventListener('load', async function () {
+            const playerBox = document.getElementById('sdk-player-box');
+            if (window.MathGameSDK && playerBox) {
+                const player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก <a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+                }
+            }
+            await refreshStartButton();
+        });
+</script>
+</body>
+</html>
