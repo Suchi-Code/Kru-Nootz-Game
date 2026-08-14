@@ -1,0 +1,20 @@
+name: Keep Supabase Alive & Log
+
+on:
+  schedule:
+    # รันทุกๆ 3 วัน เวลาเที่ยงคืน UTC (07:00 น. เวลาไทย)
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # ปุ่มกดรันเองเพื่อทดสอบ
+
+jobs:
+  ping-and-log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Insert log into Supabase
+        run: |
+          curl -f -i -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/keep_alive_logs" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{"source": "github-actions-ping"}'
