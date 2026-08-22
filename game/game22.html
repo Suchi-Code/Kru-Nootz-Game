@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมเศษส่วนแสนสนุก - ป.3</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --accent: #FFD166;
+            --success: #06D6A0;
+            --danger: #EF476F;
+            --bg: #F8F9FA;
+            --card-bg: #FFFFFF;
+            --text: #2C3E50;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .game-container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 600px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            background: #EBF3FA;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 800;
+            padding: 8px 16px;
+            border-radius: 50px;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .visual-container {
+            width: 100%;
+            min-height: 220px;
+            background: #F0F4F8;
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 20px;
+        }
+
+        .word-problem {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.6;
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .word-problem .highlight {
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .option-btn {
+            background: #FFFFFF;
+            border: 3px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 14px 20px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 65px;
+        }
+
+        .option-btn:hover {
+            border-color: var(--primary);
+            background-color: #F4F8FC;
+            transform: translateY(-2px);
+        }
+
+        .option-btn.correct {
+            background-color: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .option-btn.incorrect {
+            background-color: var(--danger) !important;
+            border-color: var(--danger) !important;
+            color: white !important;
+        }
+
+        .fraction-math {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            line-height: 1;
+            font-size: 1.3rem;
+            margin: 0 4px;
+        }
+
+        .fraction-math .numerator {
+            border-bottom: 2px solid currentColor;
+            padding: 0 4px 2px 4px;
+        }
+
+        .fraction-math .denominator {
+            padding: 2px 4px 0 4px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .btn-large {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #357ABD;
+            transition: all 0.1s ease;
+            margin-top: 15px;
+        }
+
+        .btn-large:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #357ABD;
+        }
+
+        .btn-large:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #357ABD;
+        }
+
+        .btn-large:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .score-final {
+            font-size: 2.5rem;
+            color: var(--primary);
+            font-weight: 800;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 480px) {
+            .title { font-size: 1.4rem; }
+            .badge { font-size: 1rem; padding: 6px 12px; }
+            .visual-container { min-height: 180px; padding: 15px; }
+            .word-problem { font-size: 1.2rem; }
+            .option-btn { font-size: 1.2rem; min-height: 55px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- หน้าแรก (Start Screen) -->
+        <div id="start-screen" class="screen active">
+            <h1 class="title">เกมเศษส่วนแสนสนุก (ป.3)</h1>
+            <p style="font-size: 1.2rem; color: #666; margin-bottom: 20px;">ฝึกอ่าน เขียน และทำโจทย์ปัญหาเศษส่วนง่ายๆ</p>
+            <div style="font-size: 5rem; margin-bottom: 20px;">🍰</div>
+            <div id="menu-player-box" style="font-size: 1rem; color: #4A90E2; font-weight: 600; margin-bottom: 15px;"></div>
+            <button id="btn-start" class="btn-large" onclick="startGame()">เริ่มเล่นเกม</button>
+        </div>
+
+        <!-- หน้าเล่นเกม (Gameplay Screen) -->
+        <div id="game-screen" class="screen">
+            <div class="header">
+                <div class="badge" id="question-number">ข้อที่ 1/10</div>
+                <div class="badge" id="score-display">คะแนน: 0</div>
+            </div>
+
+            <div class="visual-container" id="visual-container">
+                <!-- Visual / Word Problem Rendered Here -->
+            </div>
+
+            <div class="options-grid" id="options-container">
+                <!-- Options Rendered Here -->
+            </div>
+        </div>
+
+        <!-- หน้าสรุปผล (End Screen) -->
+        <div id="end-screen" class="screen">
+            <h1 class="title">เก่งมาก! เล่นจบแล้ว</h1>
+            <div style="font-size: 5rem; margin-top: 10px;">🏆</div>
+            <div class="score-final" id="final-score">0 / 10</div>
+            <p id="feedback-text" style="font-size: 1.2rem; color: #666; margin-bottom: 20px;"></p>
+            <p id="summary-save-status" style="font-size: 1rem; color: #666; margin-bottom: 15px; font-weight: 600;"></p>
+            <button id="btn-restart" class="btn-large" onclick="startGame()">เล่นอีกครั้ง</button>
+        </div>
+    </div>
+
+    <script>
+        /* Supabase / MathGameSDK wiring */
+        const GAME_ID = 'game22';
+        let startTime = null;
+        function getElapsedSeconds() {
+            return startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+        }
+
+        const THAI_NUMBERS = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า", "สิบ"];
+        
+        // คลังแม่แบบโจทย์ปัญหาภาษาไทยสำหรับ ป.3
+        const WORD_PROBLEM_TEMPLATES = [
+            (name, num, den) => `🎂 <span class="highlight">${name}</span> ตัดขนมเค้กเป็น <span class="highlight">${den}</span> ส่วนเท่าๆ กัน และแบ่งให้เพื่อนไป <span class="highlight">${num}</span> ส่วน<br>ส่วนที่แบ่งให้เพื่อนคิดเป็นเศษส่วนเท่าใดของขนมเค้กทั้งหมด?`,
+            (name, num, den) => `🍕 <span class="highlight">${name}</span> ซื้อพิซซ่ามา 1 ถาด แบ่งเป็น <span class="highlight">${den}</span> ชิ้นเท่าๆ กัน กินไป <span class="highlight">${num}</span> ชิ้น<br>พิซซ่าส่วนที่กินไปคิดเป็นเศษส่วนเท่าใด?`,
+            (name, num, den) => `🍫 แม่แบ่งช็อกโกแลตให้ <span class="highlight">${name}</span> โดยแบ่งออกเป็น <span class="highlight">${den}</span> ช่องเท่าๆ กัน <span class="highlight">${name}</span> ทานไป <span class="highlight">${num}</span> ช่อง<br>คิดเป็นเศษส่วนเท่าใดของช็อกโกแลต?`,
+            (name, num, den) => `🍉 มีแตงโม 1 ผล ตัดแบ่งเป็น <span class="highlight">${den}</span> ชิ้นเท่าๆ กัน <span class="highlight">${name}</span> หยิบไปทาน <span class="highlight">${num}</span> ชิ้น<br>แตงโมส่วนที่ถูกทานไปคิดเป็นเศษส่วนเท่าใด?`,
+            (name, num, den) => `🎨 <span class="highlight">${name}</span> ระบายสีแผ่นกระดาษที่ถูกแบ่งเป็น <span class="highlight">${den}</span> ช่องเท่าๆ กัน โดยระบายสีไป <span class="highlight">${num}</span> ช่อง<br>ส่วนที่ระบายสีคิดเป็นเศษส่วนเท่าใด?`
+        ];
+
+        const NAMES = ["คุณครู", "ก้อง", "แก้ว", "ต้นกล้า", "ใบบัว", "มะลิ", "ออม", "ป๋อ"];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let isAnswering = false;
+        let targetNumerator = 0;
+        let targetDenominator = 0;
+
+        function startGame() {
+            // ป้องกันการกดเริ่มเกมถ้าปุ่มถูกล็อกไว้ (หัวใจหมด)
+            const startBtn = document.getElementById('btn-start');
+            const restartBtn = document.getElementById('btn-restart');
+            if ((startBtn && startBtn.disabled) || (restartBtn && restartBtn.disabled)) {
+                return;
+            }
+
+            startTime = Date.now();
+            currentQuestion = 0;
+            score = 0;
+            isAnswering = false;
+            
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('end-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentQuestion >= 10) {
+                endGame();
+                return;
+            }
+
+            currentQuestion++;
+            isAnswering = true;
+
+            document.getElementById('question-number').textContent = `ข้อที่ ${currentQuestion}/10`;
+            document.getElementById('score-display').textContent = `คะแนน: ${score}`;
+
+            // Randomize Denominator (2 to 10) and Numerator (1 to Denominator - 1)
+            targetDenominator = Math.floor(Math.random() * 9) + 2; 
+            targetNumerator = Math.floor(Math.random() * (targetDenominator - 1)) + 1;
+
+            const container = document.getElementById('visual-container');
+            
+            // Randomly pick mode: 0 = Circle SVG, 1 = Bar SVG, 2 = Word Problem
+            const mode = Math.floor(Math.random() * 3);
+
+            if (mode === 0) {
+                container.innerHTML = generateCircleSVG(targetNumerator, targetDenominator);
+            } else if (mode === 1) {
+                container.innerHTML = generateBarSVG(targetNumerator, targetDenominator);
+            } else {
+                container.innerHTML = generateWordProblem(targetNumerator, targetDenominator);
+            }
+
+            generateOptions();
+        }
+
+        function generateCircleSVG(num, den) {
+            const size = 180;
+            const center = size / 2;
+            const radius = 80;
+            let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+
+            for (let i = 0; i < den; i++) {
+                const startAngle = (i * 360) / den - 90;
+                const endAngle = ((i + 1) * 360) / den - 90;
+                const isFilled = i < num;
+
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+
+                const x1 = center + radius * Math.cos(startRad);
+                const y1 = center + radius * Math.sin(startRad);
+                const x2 = center + radius * Math.cos(endRad);
+                const y2 = center + radius * Math.sin(endRad);
+
+                const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+                const color = isFilled ? '#4A90E2' : '#FFFFFF';
+
+                const pathData = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                svg += `<path d="${pathData}" fill="${color}" stroke="#2C3E50" stroke-width="3" />`;
+            }
+
+            svg += `</svg>`;
+            return svg;
+        }
+
+        function generateBarSVG(num, den) {
+            const width = 280;
+            const height = 70;
+            const partWidth = width / den;
+            let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+
+            for (let i = 0; i < den; i++) {
+                const color = i < num ? '#FFD166' : '#FFFFFF';
+                svg += `<rect x="${i * partWidth}" y="0" width="${partWidth}" height="${height}" fill="${color}" stroke="#2C3E50" stroke-width="3" />`;
+            }
+
+            svg += `</svg>`;
+            return svg;
+        }
+
+        function generateWordProblem(num, den) {
+            const randomTemplate = WORD_PROBLEM_TEMPLATES[Math.floor(Math.random() * WORD_PROBLEM_TEMPLATES.length)];
+            const randomName = NAMES[Math.floor(Math.random() * NAMES.length)];
+            return `<div class="word-problem">${randomTemplate(randomName, num, den)}</div>`;
+        }
+
+        function generateOptions() {
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            const correctAnswer = { num: targetNumerator, den: targetDenominator };
+            let choices = [correctAnswer];
+
+            // Generate 2 distractors
+            while (choices.length < 3) {
+                let dDen = Math.floor(Math.random() * 9) + 2;
+                let dNum = Math.floor(Math.random() * (dDen - 1)) + 1;
+
+                if (!choices.some(c => c.num === dNum && c.den === dDen)) {
+                    choices.push({ num: dNum, den: dDen });
+                }
+            }
+
+            // Shuffle options
+            choices.sort(() => Math.random() - 0.5);
+
+            // 50% chance to display as Thai reading, 50% as Fraction format
+            const displayAsThai = Math.random() > 0.5;
+
+            choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+
+                if (displayAsThai) {
+                    button.textContent = `เศษ${THAI_NUMBERS[choice.num]}ส่วน${THAI_NUMBERS[choice.den]}`;
+                } else {
+                    button.innerHTML = `
+                        <div class="fraction-math">
+                            <span class="numerator">${choice.num}</span>
+                            <span class="denominator">${choice.den}</span>
+                        </div>
+                    `;
+                }
+
+                button.onclick = () => checkAnswer(choice, correctAnswer, button);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selected, correct, button) {
+            if (!isAnswering) return;
+            isAnswering = false;
+
+            const isCorrect = (selected.num === correct.num && selected.den === correct.den);
+
+            if (isCorrect) {
+                score++;
+                button.classList.add('correct');
+                document.getElementById('score-display').textContent = `คะแนน: ${score}`;
+            } else {
+                button.classList.add('incorrect');
+                // Highlight correct button
+                const buttons = document.querySelectorAll('.option-btn');
+                buttons.forEach(btn => {
+                    if (btn.innerText.includes(THAI_NUMBERS[correct.num]) || btn.innerHTML.includes(`class="numerator">${correct.num}<`)) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                nextQuestion();
+            }, 1200);
+        }
+
+        async function endGame() {
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('end-screen').classList.add('active');
+            document.getElementById('final-score').textContent = `${score} / 10`;
+
+            const feedback = document.getElementById('feedback-text');
+            if (score === 10) {
+                feedback.textContent = "สุดยอดเลย! หนูทำได้คะแนนเต็ม 10!";
+            } else if (score >= 7) {
+                feedback.textContent = "เก่งมากเลยครับ! ลองฝึกอีกนิดจะได้คะแนนเต็มนะ";
+            } else {
+                feedback.textContent = "พยายามได้ดีแล้วครับ! มาลองฝึกฝนกันใหม่อีกครั้งนะ";
+            }
+
+            await onGameFinished(score, 10);
+        }
+
+        async function onGameFinished(finalScore, totalQuestions) {
+            const elapsed = getElapsedSeconds();
+            const statusEl = document.getElementById('summary-save-status');
+
+            if (window.MathGameSDK) {
+                try {
+                    const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+                    if (res.saved) {
+                        statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                    } else if (res.reason === 'not-better') {
+                        statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                    } else if (res.reason === 'no-hearts') {
+                        statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                    } else if (res.reason === 'no-player') {
+                        statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                    } else {
+                        statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            } else {
+                statusEl.textContent = 'ไม่พบระบบบันทึกคะแนน (MathGameSDK) คะแนนนี้จะไม่ถูกบันทึก';
+            }
+
+            await refreshStartButton();
+        }
+
+        async function refreshStartButton() {
+            const startBtn = document.getElementById('btn-start');
+            const restartBtn = document.getElementById('btn-restart');
+            if (!window.MathGameSDK) return;
+
+            const status = await MathGameSDK.getGameStatus(GAME_ID);
+            // status = { played: true/false, hearts: number|null }
+
+            let disabled, startLabel, restartLabel;
+            if (!status.played) {
+                disabled = false;
+                startLabel = 'เริ่มเล่นเกม';
+                restartLabel = 'เล่นอีกครั้ง';
+            } else if (status.hearts === null || status.hearts > 0) {
+                disabled = false;
+                startLabel = 'เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+                restartLabel = 'เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+            } else {
+                disabled = true;
+                startLabel = 'ใช้หัวใจครบแล้ว เล่นซ้ำไม่ได้';
+                restartLabel = 'ใช้หัวใจครบแล้ว เล่นซ้ำไม่ได้';
+            }
+
+            if (startBtn) {
+                startBtn.disabled = disabled;
+                startBtn.textContent = startLabel;
+            }
+            if (restartBtn) {
+                restartBtn.disabled = disabled;
+                restartBtn.textContent = restartLabel;
+            }
+        }
+
+        window.onload = async function() {
+            var playerBox = document.getElementById('menu-player-box');
+            if (window.MathGameSDK) {
+                var player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก ' +
+                        '<a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+                }
+            } else {
+                playerBox.innerHTML = 'ไม่พบระบบผู้เล่น (MathGameSDK)';
+            }
+            await refreshStartButton();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>อัจฉริยะนักคัดแยกรูปสี่เหลี่ยม (Quadrilateral Master)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../assets/mathgame-sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f9ff;
+            --primary-color: #4a90e2;
+            --accent-color: #ffcc00;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --text-color: #2c3e50;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Screen Container */
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 1000px;
+            height: 90vh;
+            padding: 20px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Start Screen */
+        #start-screen {
+            justify-content: center;
+            text-align: center;
+            gap: 30px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            color: var(--primary-color);
+            text-shadow: 2px 2px 0px #fff, 4px 4px 0px rgba(0,0,0,0.1);
+        }
+
+        p.subtitle {
+            font-size: 1.4rem;
+            color: #666;
+        }
+
+        .btn {
+            background: #ff7675;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #d63031;
+            transition: all 0.1s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 0 #d63031;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #d63031;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 8px 0 #d63031;
+        }
+
+        .player-box {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Game Header */
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .stat-box {
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .stat-box span {
+            color: var(--primary-color);
+        }
+
+        /* Target Zones (Baskets) Grid */
+        .zones-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .zone {
+            background: white;
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            height: 130px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .zone-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .zone.drag-over {
+            transform: scale(1.05);
+            background-color: #e3f2fd;
+        }
+
+        /* Zone Colors */
+        .zone-1 { border-color: #ff6b6b; color: #d63031; }
+        .zone-2 { border-color: #4ecdc4; color: #00827a; }
+        .zone-3 { border-color: #ffe66d; color: #d4ac0d; }
+        .zone-4 { border-color: #1dd1a1; color: #10ac84; }
+        .zone-5 { border-color: #a29bfe; color: #6c5ce7; }
+        .zone-6 { border-color: #ff9ff3; color: #f368e0; }
+
+        /* Card Dock / Area */
+        .card-dock {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Draggable Card */
+        .card {
+            width: 220px;
+            height: 150px;
+            background: white;
+            border: 3px solid var(--primary-color);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            text-align: center;
+            cursor: grab;
+            touch-action: none;
+            position: absolute;
+            z-index: 10;
+            transition: transform 0.1s ease;
+        }
+
+        .card:active {
+            cursor: grabbing;
+        }
+
+        .card svg {
+            width: 90px;
+            height: 90px;
+            fill: #4a90e2;
+            stroke: #2c3e50;
+            stroke-width: 3;
+        }
+
+        .card .property-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Feedback Popups */
+        .feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            z-index: 100;
+            pointer-events: none;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .feedback.correct {
+            background-color: var(--success-color);
+        }
+
+        .feedback.incorrect {
+            background-color: var(--danger-color);
+        }
+
+        .feedback.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* End Screen */
+        #end-screen {
+            justify-content: center;
+            text-align: center;
+            gap: 20px;
+        }
+
+        .final-score {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .zones-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .zone {
+                height: 100px;
+            }
+            .card {
+                width: 180px;
+                height: 130px;
+            }
+            .card svg {
+                width: 70px;
+                height: 70px;
+            }
+            .card .property-text {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen active">
+        <h1>อัจฉริยะนักคัดแยกรูปสี่เหลี่ยม</h1>
+        <p class="subtitle">ลากการ์ดคุณสมบัติหรือรูปภาพ ไปวางในกล่องประเภทสี่เหลี่ยมให้ถูกต้อง!</p>
+        <div id="menu-player-box" class="player-box"></div>
+        <button id="btn-start" class="btn" onclick="startGame()">เริ่มเล่นเกม</button>
+    </div>
+
+    <!-- Gameplay Screen -->
+    <div id="game-screen" class="screen">
+        <div class="header">
+            <div class="stat-box">คะแนน: <span id="score-display">0</span></div>
+            <div class="stat-box">เวลา: <span id="timer-display">60</span>s</div>
+        </div>
+
+        <div class="zones-grid">
+            <div class="zone zone-1" data-type="square">
+                <div class="zone-title">สี่เหลี่ยมจัตุรัส</div>
+            </div>
+            <div class="zone zone-2" data-type="rectangle">
+                <div class="zone-title">สี่เหลี่ยมผืนผ้า</div>
+            </div>
+            <div class="zone zone-3" data-type="rhombus">
+                <div class="zone-title">สี่เหลี่ยมขนมเปียกปูน</div>
+            </div>
+            <div class="zone zone-4" data-type="parallelogram">
+                <div class="zone-title">สี่เหลี่ยมด้านขนาน</div>
+            </div>
+            <div class="zone zone-5" data-type="trapezoid">
+                <div class="zone-title">สี่เหลี่ยมคางหมู</div>
+            </div>
+            <div class="zone zone-6" data-type="kite">
+                <div class="zone-title">สี่เหลี่ยมรูปว่าว</div>
+            </div>
+        </div>
+
+        <div class="card-dock" id="card-dock">
+            <!-- Card dynamically generated here -->
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" class="screen">
+        <h1>หมดเวลาแล้ว!</h1>
+        <div class="final-score">คะแนนที่คุณได้: <span id="final-score-display">0</span></div>
+        <p id="summary-save-status" style="font-size: 1rem; color: #666; font-weight: 600;"></p>
+        <button id="btn-restart" class="btn" onclick="startGame()">เล่นอีกครั้ง</button>
+    </div>
+
+    <script>
+        // Quad Data Definitions
+        const QUAD_TYPES = {
+            SQUARE: 'square',
+            RECTANGLE: 'rectangle',
+            RHOMBUS: 'rhombus',
+            PARALLELOGRAM: 'parallelogram',
+            TRAPEZOID: 'trapezoid',
+            KITE: 'kite'
+        };
+
+        const shapeData = [
+            {
+                type: QUAD_TYPES.SQUARE,
+                properties: ["ด้านเท่ากัน 4 ด้าน", "มุมฉาก 4 มุม"],
+                svg: '<svg viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="2" /></svg>'
+            },
+            {
+                type: QUAD_TYPES.RECTANGLE,
+                properties: ["ด้านตรงข้ามเท่ากัน", "มุมฉาก 4 มุม"],
+                svg: '<svg viewBox="0 0 100 100"><rect x="10" y="25" width="80" height="50" rx="2" /></svg>'
+            },
+            {
+                type: QUAD_TYPES.RHOMBUS,
+                properties: ["ด้านเท่ากัน 4 ด้าน", "มุมตรงข้ามเท่ากัน (ไม่ใช่มุมฉาก)"],
+                svg: '<svg viewBox="0 0 100 100"><polygon points="50,10 85,50 50,90 15,50" /></svg>'
+            },
+            {
+                type: QUAD_TYPES.PARALLELOGRAM,
+                properties: ["ด้านตรงข้ามขนานกันและยาวเท่ากัน 2 คู่"],
+                svg: '<svg viewBox="0 0 100 100"><polygon points="25,25 90,25 75,75 10,75" /></svg>'
+            },
+            {
+                type: QUAD_TYPES.TRAPEZOID,
+                properties: ["มีด้านขนานกันเพียง 1 คู่"],
+                svg: '<svg viewBox="0 0 100 100"><polygon points="30,25 70,25 90,75 10,75" /></svg>'
+            },
+            {
+                type: QUAD_TYPES.KITE,
+                properties: ["ด้านประชิดยาวเท่ากัน 2 คู่", "เส้นทแยงมุมตัดกันเป็นมุมฉาก"],
+                svg: '<svg viewBox="0 0 100 100"><polygon points="50,10 85,40 50,90 15,40" /></svg>'
+            }
+        ];
+
+        /* Supabase / MathGameSDK wiring */
+        const GAME_ID = 'game21';
+        let startTime = null;
+        function getElapsedSeconds() {
+            return startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+        }
+
+        // Game State Variables
+        let score = 0;
+        let timeRemaining = 60;
+        let timerInterval = null;
+        let currentCardData = null;
+        let activeCardElem = null;
+        let totalAttempts = 0; // จำนวนครั้งที่ลากการ์ดไปวาง (ถูก+ผิด) ใช้แทน totalQuestions ตอนบันทึกคะแนน
+
+        // Pointer Drag State
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let initialLeft = 0, initialTop = 0;
+
+        // UI Elements
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const finalScoreDisplay = document.getElementById('final-score-display');
+        const cardDock = document.getElementById('card-dock');
+        const feedbackElem = document.getElementById('feedback');
+        const zones = document.querySelectorAll('.zone');
+
+        function startGame() {
+            // ป้องกันการกดเริ่มเกมถ้าปุ่มถูกล็อกไว้ (หัวใจหมด)
+            const startBtn = document.getElementById('btn-start');
+            const restartBtn = document.getElementById('btn-restart');
+            if ((startBtn && startBtn.disabled) || (restartBtn && restartBtn.disabled)) {
+                return;
+            }
+
+            startTime = Date.now();
+            score = 0;
+            totalAttempts = 0;
+            timeRemaining = 60;
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeRemaining;
+
+            startScreen.classList.remove('active');
+            endScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+
+            spawnCard();
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                timerDisplay.textContent = timeRemaining;
+                if (timeRemaining <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        async function endGame() {
+            clearInterval(timerInterval);
+            gameScreen.classList.remove('active');
+            endScreen.classList.add('active');
+            finalScoreDisplay.textContent = score;
+
+            await onGameFinished(score, totalAttempts);
+        }
+
+        async function onGameFinished(finalScore, attemptsMade) {
+            const elapsed = getElapsedSeconds();
+            const statusEl = document.getElementById('summary-save-status');
+
+            if (window.MathGameSDK) {
+                try {
+                    // เกมนี้เป็นแบบจับเวลา 60 วินาที ไม่ใช่ควิซ 10 ข้อคงที่
+                    // จึงส่งจำนวนครั้งที่ลากการ์ดทั้งหมด (ถูก+ผิด) แทนค่า totalQuestions
+                    const res = await MathGameSDK.submitScore(GAME_ID, finalScore, attemptsMade, elapsed);
+                    if (res.saved) {
+                        statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+                    } else if (res.reason === 'not-better') {
+                        statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+                    } else if (res.reason === 'no-hearts') {
+                        statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+                    } else if (res.reason === 'no-player') {
+                        statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+                    } else {
+                        statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                    }
+                } catch (e) {
+                    statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+                }
+            } else {
+                statusEl.textContent = 'ไม่พบระบบบันทึกคะแนน (MathGameSDK) คะแนนนี้จะไม่ถูกบันทึก';
+            }
+
+            await refreshStartButton();
+        }
+
+        async function refreshStartButton() {
+            const startBtn = document.getElementById('btn-start');
+            const restartBtn = document.getElementById('btn-restart');
+            if (!window.MathGameSDK) return;
+
+            const status = await MathGameSDK.getGameStatus(GAME_ID);
+            // status = { played: true/false, hearts: number|null }
+
+            let disabled, startLabel, restartLabel;
+            if (!status.played) {
+                disabled = false;
+                startLabel = 'เริ่มเล่นเกม';
+                restartLabel = 'เล่นอีกครั้ง';
+            } else if (status.hearts === null || status.hearts > 0) {
+                disabled = false;
+                startLabel = 'เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+                restartLabel = 'เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+            } else {
+                disabled = true;
+                startLabel = 'ใช้หัวใจครบแล้ว เล่นซ้ำไม่ได้';
+                restartLabel = 'ใช้หัวใจครบแล้ว เล่นซ้ำไม่ได้';
+            }
+
+            if (startBtn) {
+                startBtn.disabled = disabled;
+                startBtn.textContent = startLabel;
+            }
+            if (restartBtn) {
+                restartBtn.disabled = disabled;
+                restartBtn.textContent = restartLabel;
+            }
+        }
+
+        window.onload = async function() {
+            var playerBox = document.getElementById('menu-player-box');
+            if (window.MathGameSDK) {
+                var player = MathGameSDK.getPlayer();
+                if (player && player.name) {
+                    playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+                } else {
+                    playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก ' +
+                        '<a href="' + (document.referrer || '../index.html') + '">กลับไปใส่ชื่อก่อน</a>';
+                }
+            } else if (playerBox) {
+                playerBox.innerHTML = 'ไม่พบระบบผู้เล่น (MathGameSDK)';
+            }
+            await refreshStartButton();
+        };
+
+        // Generate Item Deck
+        function generateDeck() {
+            let deck = [];
+            shapeData.forEach(item => {
+                // Add Image Card
+                deck.push({
+                    type: item.type,
+                    contentType: 'image',
+                    content: item.svg
+                });
+                // Add Text Cards
+                item.properties.forEach(prop => {
+                    deck.push({
+                        type: item.type,
+                        contentType: 'text',
+                        content: prop
+                    });
+                });
+            });
+            return deck;
+        }
+
+        let gameDeck = [];
+
+        function spawnCard() {
+            if (gameDeck.length === 0) {
+                gameDeck = generateDeck();
+            }
+
+            // Pick random item
+            const randomIndex = Math.floor(Math.random() * gameDeck.length);
+            currentCardData = gameDeck.splice(randomIndex, 1)[0];
+
+            // Clean previous cards
+            cardDock.innerHTML = '';
+
+            // Create Card Element
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            if (currentCardData.contentType === 'image') {
+                card.innerHTML = currentCardData.content;
+            } else {
+                card.innerHTML = `<div class="property-text">${currentCardData.content}</div>`;
+            }
+
+            cardDock.appendChild(card);
+            activeCardElem = card;
+
+            // Attach Touch/Pointer Events
+            card.addEventListener('pointerdown', onPointerDown);
+        }
+
+        /* --- Pointer Events Drag Engine --- */
+
+        function onPointerDown(e) {
+            isDragging = true;
+            activeCardElem.setPointerCapture(e.pointerId);
+
+            startX = e.clientX;
+            startY = e.clientY;
+
+            const rect = activeCardElem.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+
+            // Detach from layout flow to move freely across body
+            activeCardElem.style.position = 'fixed';
+            activeCardElem.style.left = `${rect.left}px`;
+            activeCardElem.style.top = `${rect.top}px`;
+            activeCardElem.style.zIndex = '1000';
+
+            activeCardElem.addEventListener('pointermove', onPointerMove);
+            activeCardElem.addEventListener('pointerup', onPointerUp);
+            activeCardElem.addEventListener('pointercancel', onPointerUp);
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            activeCardElem.style.left = `${initialLeft + dx}px`;
+            activeCardElem.style.top = `${initialTop + dy}px`;
+
+            // Hover effects over target zones
+            const cardRect = activeCardElem.getBoundingClientRect();
+            const cardCenter = {
+                x: cardRect.left + cardRect.width / 2,
+                y: cardRect.top + cardRect.height / 2
+            };
+
+            zones.forEach(zone => {
+                const zRect = zone.getBoundingClientRect();
+                if (cardCenter.x >= zRect.left && cardCenter.x <= zRect.right &&
+                    cardCenter.y >= zRect.top && cardCenter.y <= zRect.bottom) {
+                    zone.classList.add('drag-over');
+                } else {
+                    zone.classList.remove('drag-over');
+                }
+            });
+        }
+
+        function onPointerUp(e) {
+            if (!isDragging) return;
+            isDragging = false;
+
+            activeCardElem.releasePointerCapture(e.pointerId);
+            activeCardElem.removeEventListener('pointermove', onPointerMove);
+            activeCardElem.removeEventListener('pointerup', onPointerUp);
+            activeCardElem.removeEventListener('pointercancel', onPointerUp);
+
+            // Determine target drop zone
+            const cardRect = activeCardElem.getBoundingClientRect();
+            const cardCenter = {
+                x: cardRect.left + cardRect.width / 2,
+                y: cardRect.top + cardRect.height / 2
+            };
+
+            let droppedZone = null;
+            zones.forEach(zone => {
+                zone.classList.remove('drag-over');
+                const zRect = zone.getBoundingClientRect();
+                if (cardCenter.x >= zRect.left && cardCenter.x <= zRect.right &&
+                    cardCenter.y >= zRect.top && cardCenter.y <= zRect.bottom) {
+                    droppedZone = zone;
+                }
+            });
+
+            if (droppedZone) {
+                checkAnswer(droppedZone.dataset.type);
+            } else {
+                resetCardPosition();
+            }
+        }
+
+        function checkAnswer(targetType) {
+            totalAttempts++;
+            if (targetType === currentCardData.type) {
+                // Correct Answer
+                score += 1;
+                scoreDisplay.textContent = score;
+                showFeedback("ถูกต้อง! +1", true);
+                spawnCard();
+            } else {
+                // Incorrect Answer
+                score = Math.max(0, score - 1); // Deduct 1 point without going below 0
+                scoreDisplay.textContent = score;
+                showFeedback("ลองใหม่อีกครั้ง! -1", false);
+                resetCardPosition();
+            }
+        }
+
+        function resetCardPosition() {
+            if (!activeCardElem) return;
+            activeCardElem.style.transition = 'all 0.3s ease';
+            activeCardElem.style.position = 'absolute';
+            activeCardElem.style.left = 'auto';
+            activeCardElem.style.top = 'auto';
+            activeCardElem.style.zIndex = '10';
+            
+            setTimeout(() => {
+                if (activeCardElem) activeCardElem.style.transition = 'transform 0.1s ease';
+            }, 300);
+        }
+
+        function showFeedback(text, isCorrect) {
+            feedbackElem.textContent = text;
+            feedbackElem.className = `feedback ${isCorrect ? 'correct' : 'incorrect'} show`;
+
+            setTimeout(() => {
+                feedbackElem.classList.remove('show');
+            }, 800);
+        }
+    </script>
+</body>
+</html>

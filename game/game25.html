@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pirate Treasure Hunt: Comparing Multiplication</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Prompt -->
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Supabase / MathGameSDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../assets/mathgame-sdk.js"></script>
+
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%);
+      user-select: none;
+    }
+
+    /* Custom Animations */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(1deg); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-12px); }
+      40%, 80% { transform: translateX(12px); }
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .animate-float { animation: float 3s infinite ease-in-out; }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+    .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+    .btn-action {
+      transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .btn-action:hover {
+      transform: translateY(-4px) scale(1.05);
+    }
+    .btn-action:active {
+      transform: translateY(2px) scale(0.95);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Ship Progress Transition */
+    #ship-icon {
+      transition: left 0.5s ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 relative overflow-x-hidden">
+
+  <!-- Background Animated Decorative Elements -->
+  <div class="absolute top-8 left-8 text-5xl opacity-30 animate-float">☁️</div>
+  <div class="absolute top-16 right-12 text-6xl opacity-30 animate-float" style="animation-delay: 1.2s;">☁️</div>
+  <div class="absolute bottom-10 left-10 text-6xl opacity-20 animate-float" style="animation-delay: 0.7s;">🌊</div>
+  <div class="absolute bottom-12 right-10 text-6xl opacity-20 animate-float" style="animation-delay: 1.8s;">🌊</div>
+
+  <!-- Main Game Card Container -->
+  <main class="w-full max-w-2xl bg-amber-50 rounded-3xl shadow-2xl border-4 border-amber-600 p-6 md:p-8 relative z-10 my-auto">
+
+    <!-- START SCREEN (ตามสเปกข้อ 5 ต้องเช็คสถานะเกมก่อนกดเริ่มเล่น) -->
+    <section id="start-screen" class="text-center py-6 animate-pop">
+      <div class="text-7xl mb-3">🏴‍☠️🗺️</div>
+      <h1 class="text-2xl md:text-3xl font-black text-amber-900 mb-2">ผจญภัยล่าสมบัติ</h1>
+      <p class="text-amber-700 font-bold mb-1">เปรียบเทียบการคูณ (ป.3)</p>
+      <p class="text-amber-800 text-sm md:text-base mb-6">เลือกเครื่องหมาย &gt; &lt; = ให้ถูกต้องครบ 10 ข้อ เพื่อค้นหาสมบัติ!</p>
+      <div id="menu-player-box" class="text-sm md:text-base font-semibold text-amber-800 bg-amber-100 inline-block px-4 py-1.5 rounded-full border border-amber-300 mb-6"></div>
+      <div>
+        <button id="btn-start" onclick="startGame()" class="btn-action w-full py-4 bg-amber-500 hover:bg-amber-400 text-white font-black text-xl rounded-2xl shadow-lg border-b-4 border-amber-700">
+          🚀 เริ่มออกเดินเรือ!
+        </button>
+      </div>
+    </section>
+
+    <!-- HEADER & SCORE DISPLAY -->
+    <header id="game-header" class="hidden justify-between items-center mb-6 bg-amber-200/80 p-3 rounded-2xl border-2 border-amber-400">
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">🏴‍☠️</span>
+        <div>
+          <h1 class="font-extrabold text-amber-900 text-lg md:text-xl leading-tight">ผจญภัยล่าสมบัติ</h1>
+          <p class="text-xs font-semibold text-amber-700">เปรียบเทียบการคูณ (ป.3)</p>
+        </div>
+      </div>
+      <div class="bg-amber-100 px-4 py-2 rounded-xl border border-amber-300 shadow-sm flex items-center gap-2">
+        <span class="text-2xl">🪙</span>
+        <span id="score-text" class="font-black text-amber-800 text-xl md:text-2xl">0 / 10</span>
+      </div>
+    </header>
+
+    <!-- PROGRESS TRACKER (SHIP MOVING TO TREASURE ISLAND) -->
+    <section id="progress-tracker" class="hidden mb-6 bg-sky-100/90 p-3 rounded-2xl border-2 border-sky-300 relative">
+      <div class="flex justify-between items-center text-xs font-bold text-sky-800 mb-1 px-1">
+        <span>เส้นทางเดินเรือ ⚓</span>
+        <span>เกาะสมบัติ 🏝️</span>
+      </div>
+      <!-- Track Line -->
+      <div class="w-full h-5 bg-sky-200 rounded-full relative overflow-hidden border border-sky-300">
+        <div id="progress-bar" class="h-full bg-gradient-to-r from-sky-400 to-teal-400 w-0 transition-all duration-500"></div>
+      </div>
+      <!-- Ship Icon positioned dynamically -->
+      <div id="ship-icon" class="absolute -top-1 text-3xl z-10 transform -translate-x-1/2 drop-shadow-md" style="left: 0%;">
+        ⛵
+      </div>
+    </section>
+
+    <!-- GAMEPLAY AREA -->
+    <section id="game-play-area" class="hidden">
+      
+      <!-- QUESTION CARD -->
+      <div id="question-card" class="bg-white rounded-2xl border-4 border-amber-400 p-6 text-center shadow-lg mb-8 relative animate-pop">
+        <span class="text-xs font-extrabold text-amber-600 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+          ข้อที่ <span id="question-num">1</span> / 10
+        </span>
+        
+        <!-- Math Expression Display -->
+        <div class="flex items-center justify-center gap-2 md:gap-4 my-6 text-2xl md:text-4xl font-black text-slate-800 tracking-wide">
+          <span id="exp-left" class="bg-amber-50 px-3 md:px-4 py-2 rounded-xl border-2 border-amber-200 shadow-inner">518 × 7</span>
+          <span id="exp-op" class="text-3xl md:text-5xl text-amber-500 font-extrabold bg-amber-100 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-2xl border-2 border-amber-300 shadow">?</span>
+          <span id="exp-right" class="bg-amber-50 px-3 md:px-4 py-2 rounded-xl border-2 border-amber-200 shadow-inner">518 × 6</span>
+        </div>
+
+        <p class="text-xs md:text-sm font-semibold text-slate-500">
+          เลือกเครื่องหมายเปรียบเทียบที่ถูกต้อง!
+        </p>
+      </div>
+
+      <!-- ANSWER BUTTONS GRID -->
+      <div class="grid grid-cols-3 gap-3 md:gap-4">
+        <button onclick="handleAnswer('>')" class="btn-action bg-emerald-500 hover:bg-emerald-400 text-white font-black text-3xl md:text-5xl py-4 rounded-2xl shadow-lg border-b-4 border-emerald-700 flex flex-col items-center justify-center gap-1">
+          <span>&gt;</span>
+          <span class="text-xs font-bold text-emerald-100">มากกว่า</span>
+        </button>
+        <button onclick="handleAnswer('<')" class="btn-action bg-rose-500 hover:bg-rose-400 text-white font-black text-3xl md:text-5xl py-4 rounded-2xl shadow-lg border-b-4 border-rose-700 flex flex-col items-center justify-center gap-1">
+          <span>&lt;</span>
+          <span class="text-xs font-bold text-rose-100">น้อยกว่า</span>
+        </button>
+        <button onclick="handleAnswer('=')" class="btn-action bg-sky-500 hover:bg-sky-400 text-white font-black text-3xl md:text-5xl py-4 rounded-2xl shadow-lg border-b-4 border-sky-700 flex flex-col items-center justify-center gap-1">
+          <span>=</span>
+          <span class="text-xs font-bold text-sky-100">เท่ากับ</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- VICTORY SCREEN (HIDDEN BY DEFAULT) -->
+    <section id="victory-screen" class="hidden text-center py-6 animate-pop">
+      <div class="text-7xl mb-3 animate-float">🏴‍☠️💎</div>
+      <h2 class="text-3xl md:text-4xl font-black text-amber-900 mb-2">ค้นพบสมบัติแล้ว!</h2>
+      <p class="text-amber-800 font-bold mb-6 text-base md:text-lg">
+        สุดยอดมากกัปตัน! คุณตอบถูกครบทั้งหมด 10 ข้อแล้ว!
+      </p>
+
+      <div class="bg-amber-100 border-2 border-amber-300 rounded-2xl p-6 mb-6">
+        <div class="text-amber-700 font-bold text-sm mb-1">สมบัติที่สะสมได้</div>
+        <div class="text-5xl font-black text-amber-600 my-2">10 / 10 🪙</div>
+        <div class="text-emerald-600 font-extrabold text-lg mt-2">
+          🌟 ผ่านระดับผู้เชี่ยวชาญการคูณ!
+        </div>
+      </div>
+
+      <p id="summary-save-status" class="text-sm md:text-base font-semibold text-amber-800 mb-4"></p>
+
+      <button id="btn-restart" onclick="restartGame()" class="btn-action w-full py-4 bg-amber-500 hover:bg-amber-400 text-white font-black text-xl rounded-2xl shadow-lg border-b-4 border-amber-700">
+        🔄 เล่นใหม่อีกครั้ง
+      </button>
+    </section>
+
+  </main>
+
+  <script>
+    // EXACT DATASET (10 QUESTIONS)
+    const DATASET = [
+      { left: "518 × 7", right: "518 × 6", op: ">" },
+      { left: "2403 × 4", right: "8 × 2403", op: "<" },
+      { left: "7999 × 2", right: "2 × 7999", op: "=" },
+      { left: "73 × 12", right: "37 × 11", op: ">" },
+      { left: "82 × 15", right: "83 × 16", op: "<" },
+      { left: "99 × 22", right: "98 × 20", op: ">" },
+      { left: "4300 × 8", right: "4318 × 9", op: "<" },
+      { left: "39 × 76", right: "42 × 78", op: "<" },
+      { left: "2008 × 5", right: "2 × 2008", op: ">" },
+      { left: "55 × 33", right: "65 × 55", op: "<" }
+    ];
+
+    /* Supabase / MathGameSDK wiring */
+    const GAME_ID = 'game25';
+    let startTime = null;
+    function getElapsedSeconds() {
+      return startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    }
+
+    // GAME STATE
+    let shuffledQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let isLocked = false;
+
+    // WEB AUDIO API SOUND EFFECTS ENGINE
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSuccessSound() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+
+      // Cheerful Arpeggio
+      osc1.frequency.setValueAtTime(523.25, now); // C5
+      osc1.frequency.setValueAtTime(659.25, now + 0.1); // E5
+      osc1.frequency.setValueAtTime(783.99, now + 0.2); // G5
+      osc1.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+
+      osc2.frequency.setValueAtTime(261.63, now); 
+      osc2.frequency.setValueAtTime(329.63, now + 0.1); 
+      osc2.frequency.setValueAtTime(392.00, now + 0.2); 
+      osc2.frequency.setValueAtTime(523.25, now + 0.3); 
+
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.5);
+      osc2.stop(now + 0.5);
+    }
+
+    function playErrorSound() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.3);
+    }
+
+    // SHUFFLE ARRAY HELPER
+    function shuffle(array) {
+      return [...array].sort(() => Math.random() - 0.5);
+    }
+
+    // INITIALIZE / RESTART GAME
+    function restartGame() {
+      // ป้องกันการกดเริ่มเกมถ้าปุ่มถูกล็อกไว้ (หัวใจหมด)
+      const startBtn = document.getElementById('btn-start');
+      const restartBtn = document.getElementById('btn-restart');
+      if ((startBtn && startBtn.disabled) || (restartBtn && restartBtn.disabled)) {
+        return;
+      }
+
+      startTime = Date.now();
+      shuffledQuestions = shuffle(DATASET);
+      currentIndex = 0;
+      score = 0;
+      isLocked = false;
+
+      document.getElementById('start-screen').classList.add('hidden');
+      document.getElementById('victory-screen').classList.add('hidden');
+
+      const header = document.getElementById('game-header');
+      header.classList.remove('hidden');
+      header.classList.add('flex');
+      document.getElementById('progress-tracker').classList.remove('hidden');
+      document.getElementById('game-play-area').classList.remove('hidden');
+
+      updateHUD();
+      renderQuestion();
+    }
+
+    // UPDATE HUD (SCORE & SHIP PROGRESS)
+    function updateHUD() {
+      document.getElementById('score-text').innerText = `${score} / 10`;
+      
+      const percent = (score / 10) * 100;
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+      document.getElementById('ship-icon').style.left = `calc(${percent}% - 12px)`;
+    }
+
+    // RENDER CURRENT QUESTION
+    function renderQuestion() {
+      const q = shuffledQuestions[currentIndex];
+      
+      document.getElementById('question-num').innerText = currentIndex + 1;
+      document.getElementById('exp-left').innerText = q.left;
+      document.getElementById('exp-right').innerText = q.right;
+      document.getElementById('exp-op').innerText = '?';
+
+      const card = document.getElementById('question-card');
+      card.classList.remove('animate-shake');
+      // Trigger pop animation
+      card.classList.remove('animate-pop');
+      void card.offsetWidth; // Reflow
+      card.classList.add('animate-pop');
+    }
+
+    // HANDLE ANSWER CLICK
+    function handleAnswer(selectedOp) {
+      if (isLocked) return;
+
+      const q = shuffledQuestions[currentIndex];
+      const card = document.getElementById('question-card');
+
+      if (selectedOp === q.op) {
+        // CORRECT ANSWER
+        isLocked = true;
+        playSuccessSound();
+
+        document.getElementById('exp-op').innerText = q.op;
+
+        // Gold Coins Confetti Burst
+        confetti({
+          particleCount: 35,
+          spread: 60,
+          origin: { y: 0.65 },
+          colors: ['#f59e0b', '#fbbf24', '#fef08a']
+        });
+
+        score++;
+        updateHUD();
+
+        setTimeout(() => {
+          currentIndex++;
+          if (currentIndex < 10) {
+            renderQuestion();
+            isLocked = false;
+          } else {
+            showVictoryScreen();
+          }
+        }, 800);
+
+      } else {
+        // INCORRECT ANSWER
+        playErrorSound();
+        card.classList.add('animate-shake');
+        setTimeout(() => {
+          card.classList.remove('animate-shake');
+        }, 400);
+      }
+    }
+
+    // SHOW VICTORY SCREEN
+    async function showVictoryScreen() {
+      document.getElementById('game-play-area').classList.add('hidden');
+      document.getElementById('victory-screen').classList.remove('hidden');
+
+      // Grand Fireworks Confetti
+      confetti({
+        particleCount: 120,
+        spread: 100,
+        origin: { y: 0.5 },
+        colors: ['#f59e0b', '#10b981', '#06b6d4', '#ec4899']
+      });
+
+      await onGameFinished(score, 10);
+    }
+
+    async function onGameFinished(finalScore, totalQuestions) {
+      const elapsed = getElapsedSeconds();
+      const statusEl = document.getElementById('summary-save-status');
+
+      if (window.MathGameSDK) {
+        try {
+          const res = await MathGameSDK.submitScore(GAME_ID, finalScore, totalQuestions, elapsed);
+          if (res.saved) {
+            statusEl.textContent = 'บันทึกคะแนนขึ้นกระดานผู้นำแล้ว!';
+          } else if (res.reason === 'not-better') {
+            statusEl.textContent = 'รอบนี้ไม่ดีกว่าคะแนนเดิม จึงยังเก็บคะแนนเดิมไว้';
+          } else if (res.reason === 'no-hearts') {
+            statusEl.textContent = 'ใช้หัวใจครบ 3 ดวงแล้ว รอบนี้จะไม่บันทึกคะแนนใหม่';
+          } else if (res.reason === 'no-player') {
+            statusEl.textContent = 'ยังไม่มีชื่อผู้เล่น คะแนนนี้จะไม่ถูกบันทึก';
+          } else {
+            statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+          }
+        } catch (e) {
+          statusEl.textContent = 'บันทึกคะแนนไม่สำเร็จ ลองใหม่อีกครั้ง';
+        }
+      } else {
+        statusEl.textContent = 'ไม่พบระบบบันทึกคะแนน (MathGameSDK) คะแนนนี้จะไม่ถูกบันทึก';
+      }
+
+      await refreshStartButton();
+    }
+
+    async function refreshStartButton() {
+      const startBtn = document.getElementById('btn-start');
+      const restartBtn = document.getElementById('btn-restart');
+      if (!window.MathGameSDK) return;
+
+      const status = await MathGameSDK.getGameStatus(GAME_ID);
+      // status = { played: true/false, hearts: number|null }
+
+      let disabled, startLabel, restartLabel;
+      if (!status.played) {
+        disabled = false;
+        startLabel = '🚀 เริ่มออกเดินเรือ!';
+        restartLabel = '🔄 เล่นใหม่อีกครั้ง';
+      } else if (status.hearts === null || status.hearts > 0) {
+        disabled = false;
+        startLabel = '🔄 เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+        restartLabel = '🔄 เล่นอีกครั้ง (เหลือ ' + status.hearts + ' หัวใจ)';
+      } else {
+        disabled = true;
+        startLabel = '💔 ใช้หัวใจครบแล้ว';
+        restartLabel = '💔 ใช้หัวใจครบแล้ว';
+      }
+
+      if (startBtn) {
+        startBtn.disabled = disabled;
+        startBtn.textContent = startLabel;
+      }
+      if (restartBtn) {
+        restartBtn.disabled = disabled;
+        restartBtn.textContent = restartLabel;
+      }
+    }
+
+    // Show start screen on load (ไม่ auto-start เกมอีกต่อไป ต้องเช็คสถานะก่อนตามข้อ 5)
+    window.onload = async function() {
+      var playerBox = document.getElementById('menu-player-box');
+      if (window.MathGameSDK) {
+        var player = MathGameSDK.getPlayer();
+        if (player && player.name) {
+          playerBox.innerHTML = 'ผู้เล่น: <strong>' + String(player.name).replace(/</g, '&lt;') + '</strong>';
+        } else {
+          playerBox.innerHTML = 'ยังไม่มีชื่อผู้เล่น คะแนนจะไม่ถูกบันทึก ' +
+            '<a href="' + (document.referrer || '../index.html') + '" class="underline text-amber-900">กลับไปใส่ชื่อก่อน</a>';
+        }
+      } else if (playerBox) {
+        playerBox.innerHTML = 'ไม่พบระบบผู้เล่น (MathGameSDK)';
+      }
+      await refreshStartButton();
+    };
+  </script>
+</body>
+</html>
