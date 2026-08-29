@@ -1438,6 +1438,42 @@
     .profile-card, .school-card, .contact-card { padding: 26px; }
     .profile-avatar { width: 110px; height: 110px; font-size: 3rem; }
   }
+    .card-clickable-wrapper {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 16px;
+      }
+      
+      /* เอฟเฟกต์เมื่อวางเมาส์เหนือการ์ด */
+      .card-clickable-wrapper:hover {
+        transform: translateY(-8px);
+      }
+      
+      .card-clickable-wrapper:hover .feature-card {
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+      }
+    
+      /* ปุ่มกดด้านล่างการ์ด */
+      .btn-play-game {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 8px 18px;
+        background-color: #ff4757; /* เปลี่ยนสีปุ่มได้ตามความเหมาะสม */
+        color: #ffffff;
+        font-weight: bold;
+        font-size: 0.9em;
+        border-radius: 20px;
+        transition: background-color 0.2s ease, transform 0.2s ease;
+      }
+    
+      .card-clickable-wrapper:hover .btn-play-game {
+        background-color: #ff6b81;
+        transform: scale(1.05);
+      }
+  
 </style>
 </head>
 <body>
@@ -1559,16 +1595,21 @@
         <h4>ภารกิจท้าทายทุกด่าน</h4>
         <p>ผจญภัยไปกับโจทย์สนุกหลากหลายรูปแบบ</p>
       </div>
-      <a href="https://ar.krucom.net/login.php" style="text-decoration: none; color: inherit; display: block; height: 100%;">
-          <div class="feature-card" style="height: 100%;">
+      <a href="https://ar.krucom.net/login.php" class="card-clickable-wrapper">
+        <div class="feature-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer;">
+          <div>
             <div class="feature-icon feature-icon-lg">
               <lottie-player src="assets/solar_system.json" background="transparent" speed="1" loop autoplay></lottie-player>
             </div>
-            <!-- กำหนด min-height ให้ h4 ให้รองรับ 2 บรรทัดพอดี -->
-            <h4 style="min-height: 2.8em; line-height: 1.4;">ผจญภัย AR Magic World</h4>
+            <h4 style="min-height: 2.8em; line-height: 1.4; margin-bottom: 8px;">ผจญภัย AR Magic World</h4>
             <p>เรียนคณิตศาสตร์ผ่านการผจญภัยในอวกาศ</p>
           </div>
-        </a>
+          
+          <div>
+            <span class="btn-play-game">🎮 กดเพื่อเล่นเกม</span>
+          </div>
+        </div>
+      </a>
   </section>
 
   <!-- Leaderboard Section -->
